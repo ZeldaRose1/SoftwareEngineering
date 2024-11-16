@@ -38,6 +38,42 @@ def create_session(uid):
         print(str(e) + "\n\nCould not create session")
 
 
+def create_reminder(un, skey, uid, rname, cat, rdate):
+    """
+    Appends new reminder to the Reminders table
+
+    Args:
+        un (str): username to return to the welcome page after r creation
+        skey (str): session key for login verification
+        uid (int): user_id of the current user
+        rname (str): reminder_name
+        cat (str): category to assign to this reminder
+        rdate (datetime): date and time to send reminder
+
+    Returns:
+        _type_: _description_
+    """
+    # Tracing statement for debugging
+    print("create_reminder() called")
+    
+    # Make reminder object from inputs
+    r = Reminders(uid, rname, cat, rdate)
+    
+    # Start database operations
+    try:
+        # Push reminder to Reminders table
+        db.session.add(r)
+        # Commit changes to the database
+        db.session.commit()
+        # Refresh welcome page to reflect changes to the table
+        return welcome(un, skey)
+    except Exception as e:
+        # Print error statement
+        print("Error creating reminder:\n" + str(e))
+        # Return to welcome page
+        return welcome(un, skey)
+
+
 # <codecell> function definitions
 def login_function(username, password):
     """
@@ -58,7 +94,7 @@ def login_function(username, password):
         return redirect("/")
     else:
         print("Login successful")
-        return redirect(f"/welcome/{skey}")
+        return welcome(username, skey)
 
 
 def create_user_function(username, password, email=None):
@@ -80,16 +116,24 @@ def verify_login(skey):
     Checks for existing session in database and
     returns true if 
     """
+    # Pull session end from the Sessions table.
     result = db.session.query(Sessions.session_end).filter(Sessions.session_key==skey).all()
-    if len(result == 0):
+    # Verify that there is at least one row
+    if len(result) == 0:
+        # Trace statements for debugging
         print("session could not be verified. Result:\n")
         print(result)
+        # Return user to login if they do not have a session
         return redirect("/login")
     else:
-        if result[0][0] is not None:
+        # Verify that the session has not expired
+        if result[0][0] is None:
+            # Tracing statement
             print("session verified")
+            # TODO: rework this. Bad idea to exploit duck typing
             return True
         else:
+            # Session exists, but has a non-None value in session_end
             print("Session existed, but was expired")
             return redirect("/login")
 
@@ -149,11 +193,19 @@ def login():
     # print(request.method)
     
     # Pull parameters
-    if request.method == "POST":
+    try:
         un = request.form['username']
         pw = request.form['password']
-    elif request.method == "GET":
+    except:
+        un = None
+        pw = None
+
+    # Check if variables are defined
+    if un is not None and pw is not None:
+        # Render template
         return render_template("login.html")
+    
+    # Tracing statement for debugging
     print(f"username read is\t\t'{un}'")
 
     #
@@ -169,12 +221,45 @@ def root():
     return login()
 
 
-@app.route("/welcome")
-@app.route("/welcome/<skey>")
+@app.route("/welcome", methods=["GET", "POST"])
+# @app.route("/welcome/<skey>")
 def welcome(username, skey=None):
+    # Tracing function for debugging
     print("welcome(username) function called")
+    # Check method
+    print("welcome() method = " + request.method)
+    # Ensure the user has an active session
     verify_login(skey)
-    return render_template("welcome.html", username=username)
+    
+    # Pull list of tasks associated with this user
+    # TODO: debug and verify this query works
+    reminders = db.session.query(  # Select columns
+        Reminders.user_id, Reminders.task_name,
+        Reminders.category, Reminders.reminder_date
+    ).select_from(Sessions).join(  # Join to Sessions as filter
+        Reminders, Reminders.user_id == Sessions.user_id
+    ).where(  # Ensure only current session is queried
+        Sessions.session_key==skey
+    ).all()
+    
+    # Pull parameters
+    try:
+        # Pull parameters
+        rname = request.form['rname']
+        cat = request.form['cat']
+        rdate = request.form['rdate']
+    except:
+        # Define parameters as None
+        rname = None
+        cat = None
+        rdate = None
+    
+    # Check for existing parameters
+    if rname is not None and cat is not None and rdate is not None:
+        create_reminder(username, skey, rname, cat, rdate)
+    
+    # Render template
+    return render_template("welcome.html", username=username, reminders=reminders)
 
 
 # @app.route("/hello")

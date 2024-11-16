@@ -11,8 +11,50 @@
 	<h1>Hello {{username}}</h1>
 	<p>Thank you for logging into our server</p>
 
+	<p>
+		<table>
+		<tr>
+			<th>
+				Reminder Name
+			</th>
+			<th>
+				Reminder Category
+			</th>
+			<th>
+				Reminder Date
+			</th>
+		</tr>
+			{% for r in reminders %}
+			<td>
+				r.task_name
+			</td>
+			<td>
+				r.category
+			</td>
+			<td>
+				r.reminder_date
+			</td>
+			{% endfor %}
+		</table>
+	</p>
+
+
+	<p>
+		Create a new reminder:
+		<form method="POST">
+			<label for="rname">Reminder Name</label><br>
+			<input type="text" id="rname" name="rname"> </input><br>
+			
+			<label for="cat">Category</label><br>
+			<input type="text" id="cat" name="cat"> </input><br>
+			
+			<label for="rdate">Reminder Date</label><br>
+			<input type="datetime" id="rdate" name="rdate"> </input><br>
+
+			<input type="submit" value="Create Task">
+		</form>
+	</p>
+	
 </body>
-
-
 </html>
 
