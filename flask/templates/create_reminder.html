@@ -1,0 +1,48 @@
+<!DOCTYPE HTML>
+
+<html>
+	<head>
+		<title>Create Reminder</title>
+	</head>
+
+
+<body>
+
+	<h1>Reminder Table</h1>
+
+	<p>
+		<table>
+		<tr>
+			<th>Reminder Name</th>
+			<th>Reminder Category</th>
+			<th>Reminder Date</th>
+		</tr>
+		{% for r in reminders %}
+			<tr>
+				<td>{{ r.task_name }}</td>
+				<td>{{ r.category }}</td>
+				<td>{{ r.reminder_date }}</td>
+			</tr>
+		{% endfor %}
+		</table>
+	</p>
+
+    <p>
+		Create a new reminder:
+		<form method="POST">
+			<input type="hidden" name="form_id" value="welcome_form">
+
+			<label for="rname">Reminder Name:</label><br>
+			<input type="text" id="rname" name="rname"><br>
+			<label for="cat">Category:</label><br>
+			<input type="text" id="cat" name="cat"><br>
+			<label for="rdate">Reminder Date:</label><br>
+			<input type="datetime-local" id="rdate" name="rdate"><br>
+
+			<input type="submit" value="Create Task">
+		</form>
+	</p>
+
+</body>
+</html>
+
