@@ -13,14 +13,18 @@
 		<input type="text" id="username" name="username"><br>
 		<label for="password">Password: </label><br>
 		<input type="text" id="password" name="password"><br>
-		<input type="submit" value="Login">
+		<input type="submit" value="Login" formaction="{{ url_for('login') }}">
 	</form>
 	</p>
 
 	<p>
 	<button onclick="location.href='/create_user';", method="GET">Create User</button>
 	</p>
+
+	<form method="POST">
 		
+	</form>
+
 
 </body>
 </html>

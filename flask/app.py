@@ -6,7 +6,7 @@ import random
 import string
 
 import flask
-from flask import render_template, request, redirect
+from flask import render_template, request, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 import sqlalchemy as sa
 from sqlalchemy.orm import DeclarativeBase  # For creating table definitions
@@ -88,37 +88,27 @@ def login_function(username, password):
     """
     print("login_function() called")
     
-    # result = db.session.execute(db.select(Users).where(Users.user_name==username).where(Users.password==password)).all()
-    # result = Users.query.filter_by(user_name=username, password=password).all()
+    try:
+        result = db.session.query(Users.user_id).filter((Users.user_name == username) & (Users.password == password)).all()
+        print("login_function() query results:")
+        print(result)
+    except Exception as e:
+        print("login_function() error:\n" + str(e))
+        return None
     
-    result = db.session.query(Users.user_id).filter(Users.user_name == username).all()
-    uid = result[0][0]
+    print("login_function() result:")
+    print(result)
+    if len(result) != 0:
+        uid = result[0][0]
+    else:
+        print("login_function(): User not found")
+        return None
     
     # print("Login check query returned " + str(len(result)) + " rows")
     
     # Create session and return the session key
     skey = create_session(uid)
-    
-    # Pull reminders to render the welcome template
-    reminders = db.session.query(  # Select columns
-            Reminders.user_id, Reminders.task_name,
-            Reminders.category, Reminders.reminder_date
-        ).select_from(Sessions).join(  # Join to Sessions as filter
-            Reminders, Reminders.user_id == Sessions.user_id
-        ).where(  # Ensure only current session is queried
-            Sessions.session_key==skey
-        ).all()
-
-    if len(result) == 0:
-        print("login_function() failed: returning to '/'")
-        # Clean memory to avoid carryover
-        del result
-        return redirect("/")
-    else:
-        # Clean memory to avoid carryover
-        del result
-        print("Login successful")
-        return render_template("welcome.html", username=username, skey=skey, reminders=reminders)
+    return skey
 
 
 def create_user_function(username, password, email=None):
@@ -234,38 +224,63 @@ def login():
         pw = None
 
     # Check if variables are defined
-    if un is None and pw is None:
+    if un is None or pw is None:
         # Render template
-        return render_template("login.html")
+        return redirect(url_for("root"))
     
     # Tracing statement for debugging
-    print(f"username read is\t\t'{un}'")
+    print(f"login() username read is\t\t'{un}'")
 
-    #
+    # Create session and pull skey
     if request.method == "POST" and un != "" and un is not None:
-       return login_function(un, pw)
-    else:
-       return render_template("login.html")
+        # Check db for username and password. Return session id if match else None
+        skey = login_function(un, pw)
 
+        # Check if session is established and pull reminders for user
+        if skey is not None:
+            print("login() successfully created session")
+            
+            # Pull reminders to render the welcome template
+            reminders = db.session.query(  # Select columns
+                    Reminders.user_id, Reminders.task_name,
+                    Reminders.category, Reminders.reminder_date
+                ).select_from(Sessions).join(  # Join to Sessions as filter
+                    Reminders, Reminders.user_id == Sessions.user_id
+                ).where(  # Ensure only current session is queried
+                    Sessions.session_key==skey
+                ).all()
+
+        else:
+            print("login_function() in login did not find matching un and pw")
+            return redirect(url_for("root"))
+
+    if skey is None:
+       return redirect(url_for("root"))
+    
+    # Render the welcome page
+    return render_template("welcome.html", username=un, reminders=reminders)
 
 @app.route("/", methods=["GET", "POST"])
 def root():
-    print("root() function called")
-    return login()
+    print("root() called")
+    return render_template("login.html")
 
 
 @app.route("/welcome", methods=["GET", "POST"])
 # @app.route("/welcome/<skey>")
-def welcome(username, skey=None):
+def welcome(username=None, skey=None):
     # Tracing function for debugging
-    print("welcome(username) function called")
+    print("welcome(username, skey) function called")
+    print("welcome(username, skey) username:\t" + str(username))
+    print("welcome(username, skey) skey:\t" + str(skey))
     # Check method
     print("welcome() method = " + request.method)
+
+    print(request.data)
     # Ensure the user has an active session
     verify_login(skey)
     
     # Pull list of tasks associated with this user
-    # TODO: debug and verify this query works
     reminders = db.session.query(  # Select columns
         Reminders.user_id, Reminders.task_name,
         Reminders.category, Reminders.reminder_date
@@ -280,7 +295,7 @@ def welcome(username, skey=None):
     print(reminders)
     
     # Render template
-    return render_template("welcome.html", username=username, reminders=reminders)
+    return render_template("welcome.html", username=username, reminders=reminders, skey=skey)
 
 
 # @app.route("/hello")
@@ -303,6 +318,7 @@ def create_user():
 
 
 @app.route("/create_reminder/<skey>", methods=["GET", "POST"])
+@app.route("/create_reminder", methods=["GET", "POST"])
 def create_reminder(skey=None):
     """ Render page for reminder creation form """
     # Debugging statement
@@ -351,4 +367,3 @@ print('script finished')
 
 if __name__ == "__main__":
         app.run()
- 

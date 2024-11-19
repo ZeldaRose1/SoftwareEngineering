@@ -43,11 +43,10 @@
 	<p>
 		<table>
 			<tr>
-				<th>Create Reminder</th>
-				<th>Update Reminder</th>
+				
 			</tr>
 			<tr>
-				<td><a href="/create_reminder/{{ skey }}">Link</a></td>
+				<td><a href="{{ url_for("create_reminder") }}">Link</a></td>
 				<td><a href="/update_reminder/{{ skey }}">Link</a></td>
 			</tr>
 		</table>
