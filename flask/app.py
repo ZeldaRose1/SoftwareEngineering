@@ -303,7 +303,8 @@ def welcome(skey=None):
         SELECT r.task_name, r.category, r.reminder_date
         FROM reminders AS r INNER JOIN sessions AS s
         ON r.user_id = s.user_id
-        WHERE s.user_id = '{skey}'
+        WHERE s.session_key = '{skey}'
+        ORDER BY r.reminder_date
         """
     )).all()
     print("welcome() reminders:")
