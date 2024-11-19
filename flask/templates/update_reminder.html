@@ -2,18 +2,21 @@
 
 <html>
 	<head>
-		<title>Welcome page!</title>
+		<title>Update Reminders!</title>
 	</head>
 
 
 <body>
 
 	<h1>Hello {{username}}</h1>
-	<p>Thank you for logging into our server</p>
+	<p>Please fill out the form with the update you wish to make.</p>
 
 	<p>
 		<table>
 		<tr>
+			<th>
+				Reminder ID
+			</th>
 			<th>
 				Reminder Name
 			</th>
@@ -26,6 +29,9 @@
 		</tr>
 		{% for r in reminders %}
 			<tr>
+				<td>
+					{{ r.reminder_id }}
+				</td>
 				<td>
 					{{ r.task_name }}
 				</td>
@@ -40,17 +46,50 @@
 		</table>
 	</p>
 
+
+
 	<p>
-		<table>
-			<tr>
-				<th>Create Reminder</th>
-				<th>Update Reminder</th>
-			</tr>
-			<tr>
-				<td><a href="/create_reminder/{{ skey }}">Link</a></td>
-				<td><a href="/update_reminder/{{ skey }}">Link</a></td>
-			</tr>
-		</table>
+		<form method="POST">
+			<table>
+				<tr>
+					<th>Reminder ID</th>
+					<th>Name</th>
+					<th>Category</th>
+					<th>Date</th>
+				</tr>
+
+				<tr>
+					<td>
+						<label for="r_id"></label>
+						<input type="int" id="r_id" name="r_id">
+					</td>
+					<td>
+						<label for="r_name"></label>
+						<input type="text" id="r_name" name="r_name">
+					</td>
+					<td>
+						<label for="r_cat"></label>
+						<input type="text" id="r_cat" name="r_cat">
+					</td>
+					<td>
+						<label for="r_date"></label>
+						<input type="datetime-local" id="r_date" name="r_date">
+					</td>
+				</tr>
+				<br>
+				<tr>
+					<th>Update</th>
+					<th>Delete</th>
+				</tr>
+
+				<tr>
+					<td><input type="submit" name="update" value="Update"></td>
+					<td><input type="submit" name="delete" value="Delete"></td>
+					<td><input type="submit" name="welcome_page" value="Return to Welcome Page" formaction="{{ url_for('welcome', skey=skey) }}"></td>
+				</tr>
+
+			</table>
+		</form>
 	</p>
 
 </body>

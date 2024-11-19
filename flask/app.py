@@ -62,8 +62,25 @@ def create_reminder_function(un, skey, uid, rname, cat, rdate):
     rdate = datetime.strptime(rdate, "%Y-%m-%dT%H:%M")
     print("create_reminder_function() rdate type:\t" + str(type(rdate)))
     
+    # Pull top number from the remiders table
+    rid = db.session.execute(sa.text(
+        f"""
+            SELECT MAX(r.reminder_id) + 1
+            FROM
+                reminders AS r
+                INNER JOIN sessions AS s
+                    ON r.user_id = s.user_id
+            WHERE
+                s.session_key = '{skey}'
+        """
+    )).fetchone()[0]
+
+    # If there is no entry in the table default to 1.
+    if rid == 0 or rid is None:
+        rid = 1
+
     # Make reminder object from inputs
-    r = Reminders(user_id=uid, task_name=rname, category=cat, reminder_date=rdate)
+    r = Reminders(reminder_id = rid, user_id=uid, task_name=rname, category=cat, reminder_date=rdate)
     
     # Start database operations
     try:
@@ -122,6 +139,115 @@ def create_user_function(username, password, email=None):
         return login()
     except:
         return create_user()
+
+
+def delete_reminder_function(skey, rid):
+    """
+    Deletes reminder from the reminders table
+
+    Parameters:
+        skey: session key to pull user_id
+        r_id: reminder id for the reminder to delete
+
+    Returns:
+        True if the reminder is deleted, False otherwise
+    """
+    print("delete_reminder_function() called.")
+    try:
+        # Execute delete query
+        delete_query=f"""
+                DELETE
+                FROM reminders
+                WHERE reminders.reminder_id IN (
+                    SELECT reminder_id FROM reminders AS r
+                        INNER JOIN sessions AS s
+                        ON r.user_id = s.user_id
+                    WHERE
+                        s.session_key='{skey}'
+                        AND r.reminder_id={rid}
+                )
+            """
+        print("delete_reminder_function() query:\n" + delete_query)
+        db.session.execute(sa.text(delete_query))
+        # Commit the delete
+        db.session.commit()
+        # Print success statement
+        print("delete_reminder_function() successful")
+        return True
+    except Exception as e:
+        # Print failure statement
+        print("delete_reminders_function() failed\n" + str(e))
+        return False
+
+
+def update_reminder_function(skey, r_id, r_name, r_cat, r_date):
+    """
+    Updates parts of a reminder based on given parameters
+
+    Parameters:
+        skey: session key for current session.
+        r_id: id of reminder to update
+        r_name: name to update or None if no update is requested
+        r_cat: category to update or None if no update is requested
+        r_date: new date for reminder or None if no update is requested
+    
+    Returns:
+        True if update succeeds or False otherwise
+    """
+    print("update_reminder_function() called")
+
+    # Start compilation of SQL queries
+    update_query = """
+        UPDATE reminders
+        SET 
+    """
+    
+    # Check for variables to update
+    
+    # Boolean to control comma structure
+    first_nn_var = True
+
+    # Adjust query for r_name
+    if r_name is not None and r_name != '':
+        update_query += f"task_name='{r_name}'"
+        first_nn_var = False
+    
+    # Adjust query for r_cat
+    if r_cat is not None and r_cat != '':
+        if first_nn_var:
+            update_query += f"category='{r_cat}'"
+            first_nn_var = False
+        else:
+            update_query += f", category='{r_cat}'"
+
+    # Adjust query for r_date
+    if r_date is not None and r_date != '':
+        if first_nn_var:
+            update_query += f"reminder_date = '{r_date}'"
+            first_nn_var = False
+        else:
+            update_query += f", reminder_date = '{r_date}'"
+    
+    # Finalize the update query
+    update_query += f" WHERE reminder_id = {r_id}"
+
+    # Debug print statement
+    # print("update_reminder_function() update_query:\n" + update_query)
+
+    try:
+        # Run query
+        db.session.execute(sa.text(update_query))
+        # Commit changes
+        db.session.commit()
+        # Print tracing statement
+        print("update_query_function() executed successfully")
+        # Return True to indicate a successful push.
+        return True
+    except Exception as e:
+        # Print tracing statement
+        print("update_query_function() failed:\n" + str(e))
+        # Return False to indicate a failed push.
+        return False
 
 
 def verify_login(skey):
@@ -194,7 +320,8 @@ class Reminders(db.Model):
     __tablename__ = "reminders"
 
     user_id = sa.Column(sa.Integer, sa.ForeignKey("users.user_id"), primary_key=True, nullable=False)
-    task_name = sa.Column(sa.String, primary_key=True)
+    reminder_id = sa.Column(sa.Integer, primary_key=True, nullable=False)
+    task_name = sa.Column(sa.String, nullable=False)
     category = sa.Column(sa.String)
     reminder_date = sa.Column(sa.DateTime)
 
@@ -272,6 +399,7 @@ def root():
 
 
 # Rework the welcome page
+@app.route("/welcome/<skey>", methods=["GET", "POST"])
 @app.route("/welcome", methods=["GET", "POST"])
 def welcome(skey=None):
     """
@@ -312,62 +440,17 @@ def welcome(skey=None):
 
     # Define urls for create and update reminders
     create_rem_url = url_for("create_reminder", skey=skey)
-    # update_rem_url = url_for("update_reminders", skey=skey)
+    update_rem_url = url_for("update_reminder", skey=skey)
 
     return render_template(
         'welcome.html',
         username=un,
         reminders=reminders,
         skey=skey,
-        create_rem_url=create_rem_url
-        # TODO: uncomment following line after update_reminder implemented
-        # update_rem_url=update_rem_url
+        create_rem_url=create_rem_url,
+        update_rem_url=update_rem_url
     )
 
-
-# @app.route("/welcome", methods=["GET", "POST"])
-# @app.route("/welcome/<skey>", methods=["GET", "POST"])
-# def welcome(username=None):
-#     # Tracing function for debugging
-#     print("welcome(username, skey) function called")
-#     print("welcome(username, skey) username:\t" + str(username))
-    
-#     # Pull skey from url
-#     try:
-#         skey = request.get_data('skey', None)
-#     except:
-#         skey = None
-#     print("welcome(username, skey) skey:\t" + str(skey))
-    
-#     # Check method
-#     print("welcome() method = " + request.method)
-
-#     print(request.data)
-#     # Ensure the user has an active session
-#     verify_login(skey)
-    
-#     # Pull list of tasks associated with this user
-#     reminders = db.session.query(  # Select columns
-#         Reminders.user_id, Reminders.task_name,
-#         Reminders.category, Reminders.reminder_date
-#     ).select_from(Sessions).join(  # Join to Sessions as filter
-#         Reminders, Reminders.user_id == Sessions.user_id
-#     ).where(  # Ensure only current session is queried
-#         Sessions.session_key==skey
-#     ).all()
-
-#     # Tracing statement for debugging
-#     print("welcome() reminder list:")
-#     print(reminders)
-    
-#     # Render template
-#     return render_template("welcome.html", username=username, reminders=reminders, skey=skey)
-
-
-# @app.route("/hello")
-# @app.route("/hello/<name>")
-# def hello_name(name=None):
-#     return render_template("hello.html", person=name)
 
 @app.route("/create_user", methods=['GET', 'POST'])
 def create_user():
@@ -438,6 +521,91 @@ def create_reminder(skey):
     else:
         print("create_reminder() insufficient data to attempt creation")
         return render_template("create_reminder.html", skey=skey)
+
+
+# Build view for updating a reminder
+@app.route("/update_reminder/<skey>", methods=["GET", "POST"])
+def update_reminder(skey):
+    """
+    Page to update reminders
+
+    Params:
+        skey: session_key to verify session and pull data from db
+    
+    Returns:
+        HTML view
+    """
+    # Debugging statement
+    print("update_reminder() called")
+
+    # Verify session
+    if not verify_login(skey):
+        # If session is invalid return to login page
+        return redirect(url_for("root"))
+    
+    # Pull parameters from form if the form has filled
+    try:
+        r_id = request.form['r_id']
+    except:
+        r_id = None    
+    try:
+        r_name = request.form['r_name']
+    except:
+        r_name = None
+    try:
+        r_cat = request.form['r_cat']
+    except:
+        r_cat = None
+    try:
+        r_date = request.form['r_date']
+    except:
+        r_date = None
+    try:
+        update = request.form['update']
+    except:
+        update = None
+    try:
+        delete = request.form['delete']
+    except:
+        delete = None
+    
+    # Debugging
+    print("update_reminder() update:" + str(update))
+    print("update_reminder() delete:" + str(delete))
+    # Success!! We can pull different buttons.
+
+    # Check if delete function is called with enough information
+    if r_id is not None and delete == "Delete":
+        delete_reminder_function(skey, r_id)
+    
+    # Check for update function:
+    if r_id is not None and update=="Update" and (
+        r_name is not None or r_cat is not None or r_date is not None):
+        update_reminder_function(skey, r_id, r_name, r_cat, r_date)   
+
+    # Pull list of reminders. This should be after the update operation
+    reminders = db.session.execute(sa.text(
+        f"""
+        SELECT r.reminder_id, r.task_name, r.category, r.reminder_date
+        FROM reminders AS r INNER JOIN sessions AS s
+        ON r.user_id = s.user_id
+        WHERE s.session_key = '{skey}'
+        ORDER BY r.reminder_date
+        """
+    )).all()
+    print("update_reminder() reminders:")
+    print(reminders)
+    
+    # if r_id is None:
+    # print("update_reminder() r_id is None")
+    return render_template('update_reminder.html', skey=skey, reminders=reminders)
+    # else:
+    #     # TODO: update this after logic is built out.
+    #     print("update_reminder() is not None")
+    #     return render_template('update_reminder.html', skey=skey, reminders=reminders)
+        
+
+
 
 
 print('script finished')
