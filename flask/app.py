@@ -72,12 +72,12 @@ def create_reminder_function(un, skey, uid, rname, cat, rdate):
         # Commit changes to the database
         db.session.commit()
         # Refresh welcome page to reflect changes to the table
-        return render_template("welcome.html", username=un, skey=skey)
+        return True
     except Exception as e:
         # Print error statement
         print("Error creating reminder:\n" + str(e))
         # Return to welcome page
-        return render_template("welcome.html", username=un, skey=skey)
+        return False
 
 
 # <codecell> function definitions
@@ -127,8 +127,13 @@ def create_user_function(username, password, email=None):
 def verify_login(skey):
     """
     Queries the database for a matching session.
-    Checks for existing session in database and
-    returns true if 
+    Checks for existing session in database
+
+    Params:
+        skey: session key to check against database
+    
+    Returns:
+        boolean: True if session is verified False otherwise
     """
     # Pull session end from the Sessions table.
     result = db.session.query(Sessions.session_end).filter(Sessions.session_key==skey).all()
@@ -140,7 +145,7 @@ def verify_login(skey):
         # Clean memory to avoid carryover
         del result
         # Return user to login if they do not have a session
-        return redirect("/login")
+        return False
     else:
         # Verify that the session has not expired
         if result[0][0] is None:
@@ -155,7 +160,7 @@ def verify_login(skey):
             print("Session existed, but was expired")
             # Clean memory to avoid carryover
             del result
-            return redirect("/login")
+            return False
 
 
 
@@ -258,7 +263,7 @@ def login():
        return redirect(url_for("root"))
     
     # Render the welcome page
-    return render_template("welcome.html", username=un, reminders=reminders)
+    return welcome(skey)
 
 @app.route("/", methods=["GET", "POST"])
 def root():
@@ -266,36 +271,96 @@ def root():
     return render_template("login.html")
 
 
+# Rework the welcome page
 @app.route("/welcome", methods=["GET", "POST"])
-# @app.route("/welcome/<skey>")
-def welcome(username=None, skey=None):
-    # Tracing function for debugging
-    print("welcome(username, skey) function called")
-    print("welcome(username, skey) username:\t" + str(username))
-    print("welcome(username, skey) skey:\t" + str(skey))
-    # Check method
-    print("welcome() method = " + request.method)
+def welcome(skey=None):
+    """
+    Verify session, pull parameters, render template
 
-    print(request.data)
-    # Ensure the user has an active session
-    verify_login(skey)
+    Params:
+        skey: session key for the session used to verify login
+    """
+    print("welcome() called")
+
+    # validate session
+    if not verify_login(skey):
+        print("welcome() could not verify session")
+        return redirect("root")
     
-    # Pull list of tasks associated with this user
-    reminders = db.session.query(  # Select columns
-        Reminders.user_id, Reminders.task_name,
-        Reminders.category, Reminders.reminder_date
-    ).select_from(Sessions).join(  # Join to Sessions as filter
-        Reminders, Reminders.user_id == Sessions.user_id
-    ).where(  # Ensure only current session is queried
-        Sessions.session_key==skey
-    ).all()
+    # Pull username
+    un = db.session.execute(sa.text(
+        f"""
+        SELECT u.user_name FROM users AS u INNER JOIN sessions AS s
+        ON u.user_id = s.user_id
+        WHERE s.session_key = '{skey}'
+        """
+    )).fetchone()[0]
+    print("welcome() username=" + str(un))
 
-    # Tracing statement for debugging
-    print("welcome() reminder list:")
+    # Pull reminder list
+    reminders = db.session.execute(sa.text(
+        f"""
+        SELECT r.task_name, r.category, r.reminder_date
+        FROM reminders AS r INNER JOIN sessions AS s
+        ON r.user_id = s.user_id
+        WHERE s.user_id = '{skey}'
+        """
+    )).all()
+    print("welcome() reminders:")
     print(reminders)
+
+    # Define urls for create and update reminders
+    create_rem_url = url_for("create_reminder", skey=skey)
+    # update_rem_url = url_for("update_reminders", skey=skey)
+
+    return render_template(
+        'welcome.html',
+        username=un,
+        reminders=reminders,
+        skey=skey,
+        create_rem_url=create_rem_url
+        # TODO: uncomment following line after update_reminder implemented
+        # update_rem_url=update_rem_url
+    )
+
+
+# @app.route("/welcome", methods=["GET", "POST"])
+# @app.route("/welcome/<skey>", methods=["GET", "POST"])
+# def welcome(username=None):
+#     # Tracing function for debugging
+#     print("welcome(username, skey) function called")
+#     print("welcome(username, skey) username:\t" + str(username))
     
-    # Render template
-    return render_template("welcome.html", username=username, reminders=reminders, skey=skey)
+#     # Pull skey from url
+#     try:
+#         skey = request.get_data('skey', None)
+#     except:
+#         skey = None
+#     print("welcome(username, skey) skey:\t" + str(skey))
+    
+#     # Check method
+#     print("welcome() method = " + request.method)
+
+#     print(request.data)
+#     # Ensure the user has an active session
+#     verify_login(skey)
+    
+#     # Pull list of tasks associated with this user
+#     reminders = db.session.query(  # Select columns
+#         Reminders.user_id, Reminders.task_name,
+#         Reminders.category, Reminders.reminder_date
+#     ).select_from(Sessions).join(  # Join to Sessions as filter
+#         Reminders, Reminders.user_id == Sessions.user_id
+#     ).where(  # Ensure only current session is queried
+#         Sessions.session_key==skey
+#     ).all()
+
+#     # Tracing statement for debugging
+#     print("welcome() reminder list:")
+#     print(reminders)
+    
+#     # Render template
+#     return render_template("welcome.html", username=username, reminders=reminders, skey=skey)
 
 
 # @app.route("/hello")
@@ -318,15 +383,16 @@ def create_user():
 
 
 @app.route("/create_reminder/<skey>", methods=["GET", "POST"])
-@app.route("/create_reminder", methods=["GET", "POST"])
-def create_reminder(skey=None):
+def create_reminder(skey):
     """ Render page for reminder creation form """
     # Debugging statement
     print("create_reminder() method called")
     print("create_reminder method:\t" + str(request.method))
+    print("create_reminder() skey = " + str(skey))
 
     # TODO: Verify how skey is handled (reminder or kwarg)
-    verify_login(skey)
+    if not verify_login(skey):
+        return redirect("root")
 
     # Pull un and uid from skey
     result = db.session.query(  # Select columns
@@ -357,10 +423,20 @@ def create_reminder(skey=None):
             rname = None
             cat = None
             rdate = None
+    
+    # Upload the reminder to the database
     if request.method == "POST" and rname is not None and cat is not None and rdate is not None:
-        return create_reminder_function(un, skey, uid, rname, cat, rdate)
+        upd_result = create_reminder_function(un, skey, uid, rname, cat, rdate)
+        print("create_reminder() upd_result=" + str(upd_result))
+        if not upd_result:
+            print("Reminder creation failed")
+            return redirect(url_for("create_reminder", skey=skey))
+        else:
+            print("create_reminder() success!")
+            return welcome(skey)
     else:
-        return render_template("create_reminder.html")
+        print("create_reminder() insufficient data to attempt creation")
+        return render_template("create_reminder.html", skey=skey)
 
 
 print('script finished')
