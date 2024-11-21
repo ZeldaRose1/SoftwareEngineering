@@ -604,7 +604,11 @@ def update_reminder(skey):
     #     print("update_reminder() is not None")
     #     return render_template('update_reminder.html', skey=skey, reminders=reminders)
         
-
+@app.route("/search/<skey>", methods=["GET", "POST"])
+def rem_search(skey):
+    """
+    Create page view to display, sort, and filter reminders.
+    """
 
 
 
