@@ -53,15 +53,18 @@
                             <tr>
                                 <th>ID</th>
                                 <th>Task Name</th>
+                                <th>Task Category</th>
                                 <th>Task Date</th>
                                 <th>Operation</th>
                             </tr>
                         </thead>
                         <tbody>
+                            {% for r in reminders %}
                             <tr>
-                                <td>example1</td>
-                                <td>example2</td>
-                                <td>example3</td>
+                                <td> { r.reminder_id } </td>
+                                <td>{ r.task_name }</td>
+                                <td>{ r.category }</td>
+                                <td>{ r.reminder_date}</td>
                                 <td>
                                     <ul class="list-unstyled m-0 p-0">
                                         <li> <a href="view_task.html" class="btn btn-link text-primary text-decoration-underline btn-sm p-0">
@@ -73,8 +76,9 @@
 										Update</a></button>
                                         </li>
                                     </ul>
-                                </td>
+                                </td>                                
                             </tr>
+                            {% endfor %}
                         </tbody>
                     </table>
                 </div>

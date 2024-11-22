@@ -1,0 +1,10 @@
+*.swp
+flask/__pycache__
+flask/__pycache__/*
+flask/__pycache__/**
+
+flask/instance
+flask/instance/*
+instance
+instance/*
+
