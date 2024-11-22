@@ -160,15 +160,6 @@ class Users(db.Model):
     isadmin = sa.Column(sa.Boolean, default=False)
 
 
-class Reminders(db.Model):
-    __tablename__ = "reminders"
-    user_id = sa.Column(sa.Integer, sa.ForeignKey("users.user_id"), primary_key=True, nullable=False)
-    reminder_id = sa.Column(sa.Integer, primary_key=True, nullable=False)
-    task_name = sa.Column(sa.String)
-    category = sa.Column(sa.String)
-    reminder_date = sa.Column(sa.DateTime)
-
-
 class Sessions(db.Model):
     """Table to track user logins"""
     __tablename__ = 'sessions'
@@ -176,6 +167,15 @@ class Sessions(db.Model):
     session_key = sa.Column(sa.String, primary_key=True, nullable=False, unique=True)
     session_start = sa.Column(sa.DateTime, nullable=False)
     session_end = sa.Column(sa.DateTime, nullable=True)
+
+
+class Reminders(db.Model):
+    __tablename__ = "reminders"
+    user_id = sa.Column(sa.Integer, sa.ForeignKey("users.user_id"), primary_key=True, nullable=False)
+    reminder_id = sa.Column(sa.Integer, primary_key=True, nullable=False)
+    task_name = sa.Column(sa.String)
+    category = sa.Column(sa.String)
+    reminder_date = sa.Column(sa.DateTime)
 
 
 # Initialize database and create tables
@@ -287,10 +287,47 @@ def welcome(skey):
     print(reminders)
     print(f"welcome() username:\t{str(un)}")
 
-    return render_template("welcome.html", reminders=reminders, username=un)
+    return render_template("welcome.html", reminders=reminders, username=un, skey=skey)
 
 
-
+@app.route("/create_task/<skey>", methods=["GET", "POST"])
+@app.route("/create_task", methods=["GET", "POST"])
+def create_task(skey):
+    """Return HTML for reminder creation page and handle creation"""
+    # Tracing statement
+    print("Create_task() called")
+    
+    # Pull variables from form
+    try:
+        new_cat = request.form["CategoryName"]
+        use_existing_cat = request.form["enableCategory"]
+        reuse_category = request.form["Category"]
+        rdate = request.form["datePicker"]
+        task_name = request.form["AddNote"]
+        note_time = request.form["Time"]
+        # note_bool = request.form["enableTime"]
+    except Exception as e:
+        print("create_task() pull variable error\n" + str(e))
+        new_cat = None
+        use_existing_cat = None
+        reuse_category = None
+        rdate = None
+        task_name = None
+        note_time = None
+        # note_bool = None
+    
+    print(new_cat)
+    print(use_existing_cat)
+    print(reuse_category)
+    print(rdate)
+    print(task_name)
+    print(note_time)
+    # print(note_bool)
+    
+    # Pull all categories in database
+    categories = db.session.execute(sa.text("""SELECT DISTINCT category FROM reminders""")).all()
+    
+    return render_template("create_task.html", skey=skey, categories=categories)
 
 
 print('script finished')

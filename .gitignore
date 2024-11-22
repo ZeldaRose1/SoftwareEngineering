@@ -8,3 +8,5 @@ flask/instance/*
 instance
 instance/*
 
+.vscode/**
+.vscode
