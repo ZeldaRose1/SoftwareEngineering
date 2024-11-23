@@ -1,12 +1,13 @@
 #!/usr/bin/python3
 
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 import random
 import string
 
 import flask
 from flask import render_template, request, redirect, url_for
+from flask import session
 from flask_sqlalchemy import SQLAlchemy
 import sqlalchemy as sa
 from sqlalchemy.orm import DeclarativeBase  # For creating table definitions
@@ -135,7 +136,7 @@ def verify_login(skey):
             return False
 
 
-def create_task_function(skey, category, name, task_date, rem_date, email, sms):
+def create_task_function(skey, category, name, task_date, rem_date, email, sms, note):
     """
     Create a new reminder from input
 
@@ -147,6 +148,7 @@ def create_task_function(skey, category, name, task_date, rem_date, email, sms):
         rem_date: DateTime to send reminder
         email: True to send reminder by email
         sms: True to send reminder by sms
+        note: Note for extra detail on task
 
     Returns:
         True if push successful
@@ -156,7 +158,11 @@ def create_task_function(skey, category, name, task_date, rem_date, email, sms):
     print(f"skey = '{skey}'")
     print(f"category = '{category}'")
     print(f"name = '{name}'")
-    print(f"date = '{date}'")
+    print(f"task_date = '{task_date}'")
+    print(f"rem_date = '{rem_date}'")
+    print(f"email = '{email}'")
+    print(f"sms = '{sms}'")
+
     # Pull user id
     try:
         uid = db.session.execute(sa.text(
@@ -189,13 +195,13 @@ def create_task_function(skey, category, name, task_date, rem_date, email, sms):
                 INSERT INTO reminders (
                     user_id, reminder_id, task_name,
                     category, task_date, reminder_dtm,
-                    email, sms
+                    email, sms, note
                 )
                 VALUES (
-                    '{uid}', '{r_seq}', '{name}',
+                    {uid}, {r_seq}, '{name}',
                     '{category}', STRFTIME("%Y-%m-%dT%H:%M", '{task_date}'),
-                    STRFTIME("%Y-%m-%dT%H:%M", '{rem_date}'),
-                    {email}, {sms}
+                    STRFTIME("%Y-%m-%d %H:%M:%S", '{rem_date}'),
+                    {email}, {sms}, '{note}'
                 )
             """
         ))
@@ -213,6 +219,8 @@ db = SQLAlchemy(model_class=Base)
 
 # Initialize flask app
 app = flask.Flask(__name__)
+# Initialize secret key for session management
+app.secret_key = "CHANGEME"
 
 # Configure SQLite db, relative to app instance folder
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///database.db"
@@ -250,6 +258,7 @@ class Reminders(db.Model):
     reminder_dtm = sa.Column(sa.DateTime)
     email = sa.Column(sa.Boolean)
     sms = sa.Column(sa.Boolean)
+    note = sa.Column(sa.String)
 
 
 # Initialize database and create tables
@@ -271,7 +280,9 @@ def root():
     if un is not None and pw is not None:
         # Pull session key
         skey = login_function(un, pw)
-        return welcome(skey)
+        # Store session key in flask session.
+        session['skey'] = skey
+        return welcome()
     else:
         return render_template("login.html")
 
@@ -301,10 +312,12 @@ def create_user():
         return render_template("create_user.html")
     
 @app.route("/welcome", methods=["GET", "POST"])
-def welcome(skey):
+def welcome():
     """Renders welcome template with queried data"""
     # Print tracing statement
     print("welcome() function called")
+    # Pull session key from session
+    skey = session.get('skey')
     # Verify login
     if not verify_login(skey):
         return redirect(url_for('root'))
@@ -364,14 +377,20 @@ def welcome(skey):
     return render_template("welcome.html", reminders=reminders, username=un, skey=skey)
 
 
-@app.route("/create_task/<skey>", methods=["GET", "POST"])
+# @app.route("/create_task/<skey>", methods=["GET", "POST"])
 @app.route("/create_task", methods=["GET", "POST"])
-def create_task(skey):
+def create_task():
     """Return HTML for reminder creation page and handle creation"""
     # Tracing statement
     print("Create_task() called")
+    # Pull skey from session
+    skey = session.get("skey")
     
     # Pull variables from form
+    try:
+        t_name = request.form["taskName"]
+    except:
+        t_name = None
     try:
         new_cat = request.form["CategoryName"]
     except:
@@ -386,17 +405,33 @@ def create_task(skey):
     except:
         reuse_category = None
     try:
-        rdate = request.form["datePicker"]
+        tdate = request.form["datePicker"]
     except:
-        rdate = None
+        tdate = None
     try:
-        task_name = request.form["AddNote"]
+        task_note = request.form["AddNote"]
     except:
-        task_name = None
+        task_note = None
     try:
-        note_time = request.form["Time"]
+        reminder_time = request.form["Time"]
+        if reminder_time == "Option1":
+            reminder_time = timedelta(minutes = -5) + datetime.strptime(tdate, "%Y-%m-%dT%H:%M")
+        if reminder_time == "Option2":
+            reminder_time = timedelta(minutes = -15) + datetime.strptime(tdate, "%Y-%m-%dT%H:%M")
+        if reminder_time == "Option3":
+            reminder_time = timedelta(minutes = -30) + datetime.strptime(tdate, "%Y-%m-%dT%H:%M")
+        if reminder_time == "Option4":
+            reminder_time = timedelta(hours = -1) + datetime.strptime(tdate, "%Y-%m-%dT%H:%M")
+        if reminder_time == "Option5":
+            reminder_time = timedelta(hours = -24) + datetime.strptime(tdate, "%Y-%m-%dT%H:%M")
+    except Exception as e:
+        print("Error fixing reminder time:\n" + str(e))
+        reminder_time = None
+    try:
+        reminder_b = request.form["enableTime"]
+        reminder_b = True
     except:
-        note_time = None
+        reminder_b = False
     try:
         note_bool = request.form["enableTime"]
         note_bool = True
@@ -415,12 +450,14 @@ def create_task(skey):
     except:
         sms_b = False
 
+    print(t_name)
     print(new_cat)
     print(use_existing_cat)
     print(reuse_category)
-    print(rdate)
-    print(task_name)
-    print(note_time)
+    print(tdate)
+    print(task_note)
+    print("reminder_time:" + str(reminder_time))
+    print("reminder_b:\t" + str(reminder_b))
     print(note_bool)
     print(email_b)
     print(sms_b)
@@ -429,6 +466,11 @@ def create_task(skey):
     if use_existing_cat is True and reuse_category != "":
         new_cat = reuse_category
     
+    # Check reminder is enabled; if not disable email and sms
+    if not reminder_b:
+        email_b = False
+        sms_b = False
+    
     # Pull all categories in database
     categories = db.session.execute(sa.text("""SELECT DISTINCT category FROM reminders""")).all()
     print("Categories:")
@@ -436,11 +478,21 @@ def create_task(skey):
 
     # Check for all necessary values to create a reminder
     if ((new_cat is not None and new_cat != "") and
-        (task_name is not None and task_name != "") and
-        (rdate is not None)
+        (t_name is not None and t_name != "") and
+        (tdate is not None)
     ):
         # TODO: update function call to match new function variables.
-        create_task_function(skey, new_cat, task_name, rdate)
+        if create_task_function(
+            skey,
+            new_cat,
+            t_name,
+            tdate,
+            reminder_time,
+            email_b,
+            sms_b,
+            task_note
+        ):
+            return redirect(url_for("welcome", skey=skey))
     
     return render_template("create_task.html", skey=skey, category=categories)
 

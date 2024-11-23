@@ -64,7 +64,7 @@
                                 <td> {{ r.reminder_id }} </td>
                                 <td>{{ r.task_name }}</td>
                                 <td>{{ r.category }}</td>
-                                <td>{{ r.reminder_date }}</td>
+                                <td>{{ r.task_date }}</td>
                                 <td>
                                     <ul class="list-unstyled m-0 p-0">
                                         <li> <a href="view_task.html" class="btn btn-link text-primary text-decoration-underline btn-sm p-0">
@@ -89,7 +89,7 @@
 		<div class="row mt-3 align-items-center d-flex justify-content-between">
             <!-- Create Task Button on the Left -->
             <div class="col-auto">
-                <a href="create_task/{{ skey }}" class="btn btn-success btn-sm">Create Task</a>
+                <a href="{{ url_for('create_task') }}" class="btn btn-success btn-sm">Create Task</a>
             </div>
             
             <!-- Keyword Input and Search Button on the Right -->
