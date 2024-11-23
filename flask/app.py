@@ -75,15 +75,15 @@ def create_user_function(username, password, email):
     # Validate username
     if username is None or username == "":
         print("create_user_function() invalid username:\t" + str(username))
-        return redirect(url_for("create_user"))
+        return render_template("create_user.html")
     # Validate password
     if password is None or password == "":
         print("create_user_function() invalid password:\t" + str(password))
-        return redirect(url_for("create_user"))
+        return render_template("create_user.html")
     # Validate email
     if email is None or email == "":
         print("create_user_function() invalid email:\t" + str(email))
-        return redirect(url_for("create_user"))
+        return render_template("create_user.html")
     
     user=Users(user_name=username, password=password, email=email)
     try:
@@ -95,7 +95,7 @@ def create_user_function(username, password, email):
         return redirect(url_for("root"))
     except:
         print("User creation failed")
-        return create_user()
+        return render_template("create_user.html")
 
 
 def verify_login(skey):
@@ -134,6 +134,77 @@ def verify_login(skey):
             del result
             return False
 
+
+def create_task_function(skey, category, name, task_date, rem_date, email, sms):
+    """
+    Create a new reminder from input
+
+    Params:
+        skey: session key for current session
+        category: Category to append to Reminders
+        name: reminder name to append to Reminders
+        task_date: DateTime of the event
+        rem_date: DateTime to send reminder
+        email: True to send reminder by email
+        sms: True to send reminder by sms
+
+    Returns:
+        True if push successful
+        False if push fails
+    """
+    print("create_task_function() called.")
+    print(f"skey = '{skey}'")
+    print(f"category = '{category}'")
+    print(f"name = '{name}'")
+    print(f"date = '{date}'")
+    # Pull user id
+    try:
+        uid = db.session.execute(sa.text(
+            f"SELECT user_id FROM sessions WHERE session_key = '{skey}'"
+        )).all()[0][0]
+        # Print output to verify uid.
+        print(f"User id pulled from skey = '{uid}'")
+    except Exception as e:
+        print("could not pull uid:\n" + str(e))
+        # Session could not be verified; terminate function with fail
+        return False
+    
+    # Pull reminder id
+    try:
+        r_seq = db.session.execute(sa.text(
+            "SELECT MAX(reminder_id) + 1 FROM reminders"
+        )).all()[0][0]
+        print(f"New id for reminder: '{r_seq}'")
+        if r_seq is None:
+            r_seq = 1
+    except Exception as e:
+        print("Could not pull reminder_id\n" + str(e))
+        # Set 1 as default value
+        r_seq = 1
+
+    # Push reminder
+    try:
+        db.session.execute(sa.text(
+            f"""
+                INSERT INTO reminders (
+                    user_id, reminder_id, task_name,
+                    category, task_date, reminder_dtm,
+                    email, sms
+                )
+                VALUES (
+                    '{uid}', '{r_seq}', '{name}',
+                    '{category}', STRFTIME("%Y-%m-%dT%H:%M", '{task_date}'),
+                    STRFTIME("%Y-%m-%dT%H:%M", '{rem_date}'),
+                    {email}, {sms}
+                )
+            """
+        ))
+        db.session.commit()
+        print("Reminder successfully created")
+        return True
+    except Exception as e:
+        print("Reminder creation failed:\n" + str(e))
+        return False
 
 
 # <codecell> Initialize items and set parameters
@@ -175,7 +246,10 @@ class Reminders(db.Model):
     reminder_id = sa.Column(sa.Integer, primary_key=True, nullable=False)
     task_name = sa.Column(sa.String)
     category = sa.Column(sa.String)
-    reminder_date = sa.Column(sa.DateTime)
+    task_date = sa.Column(sa.DateTime)
+    reminder_dtm = sa.Column(sa.DateTime)
+    email = sa.Column(sa.Boolean)
+    sms = sa.Column(sa.Boolean)
 
 
 # Initialize database and create tables
@@ -241,7 +315,7 @@ def welcome(skey):
             f"""
                 SELECT
                     reminder_id, task_name,
-                    category, reminder_date
+                    category, task_date
                 FROM reminders AS r
                 WHERE r.user_id IN (
                     SELECT user_id
@@ -300,34 +374,75 @@ def create_task(skey):
     # Pull variables from form
     try:
         new_cat = request.form["CategoryName"]
-        use_existing_cat = request.form["enableCategory"]
-        reuse_category = request.form["Category"]
-        rdate = request.form["datePicker"]
-        task_name = request.form["AddNote"]
-        note_time = request.form["Time"]
-        # note_bool = request.form["enableTime"]
-    except Exception as e:
-        print("create_task() pull variable error\n" + str(e))
+    except:
         new_cat = None
-        use_existing_cat = None
+    try:
+        use_existing_cat = request.form["enableCategory"]
+        use_existing_cat = True
+    except:
+        use_existing_cat = False
+    try: 
+        reuse_category = request.form["Category"]
+    except:
         reuse_category = None
+    try:
+        rdate = request.form["datePicker"]
+    except:
         rdate = None
+    try:
+        task_name = request.form["AddNote"]
+    except:
         task_name = None
+    try:
+        note_time = request.form["Time"]
+    except:
         note_time = None
-        # note_bool = None
-    
+    try:
+        note_bool = request.form["enableTime"]
+        note_bool = True
+    except:
+        note_bool = False
+    try:
+        email_b = request.form["Email"]
+        if email_b is not None:
+            email_b = True
+    except:
+        email_b = False
+    try:
+        sms_b = request.form["SMS"]
+        if sms_b is not None:
+            sms_b = True
+    except:
+        sms_b = False
+
     print(new_cat)
     print(use_existing_cat)
     print(reuse_category)
     print(rdate)
     print(task_name)
     print(note_time)
-    # print(note_bool)
+    print(note_bool)
+    print(email_b)
+    print(sms_b)
+
+    # If reuse category is checked reassign the category var
+    if use_existing_cat is True and reuse_category != "":
+        new_cat = reuse_category
     
     # Pull all categories in database
     categories = db.session.execute(sa.text("""SELECT DISTINCT category FROM reminders""")).all()
+    print("Categories:")
+    print(categories)
+
+    # Check for all necessary values to create a reminder
+    if ((new_cat is not None and new_cat != "") and
+        (task_name is not None and task_name != "") and
+        (rdate is not None)
+    ):
+        # TODO: update function call to match new function variables.
+        create_task_function(skey, new_cat, task_name, rdate)
     
-    return render_template("create_task.html", skey=skey, categories=categories)
+    return render_template("create_task.html", skey=skey, category=categories)
 
 
 print('script finished')
