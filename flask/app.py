@@ -481,7 +481,6 @@ def create_task():
         (t_name is not None and t_name != "") and
         (tdate is not None)
     ):
-        # TODO: update function call to match new function variables.
         if create_task_function(
             skey,
             new_cat,
@@ -492,9 +491,37 @@ def create_task():
             sms_b,
             task_note
         ):
-            return redirect(url_for("welcome", skey=skey))
+            return redirect(url_for("welcome"))
     
     return render_template("create_task.html", skey=skey, category=categories)
+
+
+@app.route("/view_task/<rid>", methods=["GET"])
+def view_task(rid):
+    """Create view for a given task."""
+    # Pull session key from session
+    skey = session.get('skey')
+    # Verify login
+    if not verify_login(skey):
+        return redirect(url_for('root'))
+
+    # Pull task from database
+    task = db.session.execute(sa.text(
+        f"""
+            SELECT
+                category,
+                task_name,
+                task_date,
+                note,
+                reminder_dtm
+            FROM
+                reminders
+            WHERE reminder_id = {rid}
+        """
+    )).all()
+
+    # Render template with task details.
+    return render_template("view_task.html", task=task)
 
 
 print('script finished')

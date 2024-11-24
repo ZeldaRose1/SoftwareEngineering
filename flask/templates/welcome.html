@@ -67,7 +67,7 @@
                                 <td>{{ r.task_date }}</td>
                                 <td>
                                     <ul class="list-unstyled m-0 p-0">
-                                        <li> <a href="view_task.html" class="btn btn-link text-primary text-decoration-underline btn-sm p-0">
+                                        <li> <a href="{{ url_for('view_task', rid=r.reminder_id )}}" class="btn btn-link text-primary text-decoration-underline btn-sm p-0">
 											View Detail
 										</a></li>
                                         <li><button class="btn btn-link text-primary text-decoration-underline btn-sm p-0">Delete</button>
