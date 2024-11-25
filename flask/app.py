@@ -311,8 +311,10 @@ def create_user():
         # Render html template
         return render_template("create_user.html")
     
+
+@app.route("/welcome/delete/<rid>", methods=["GET", "POST"])
 @app.route("/welcome", methods=["GET", "POST"])
-def welcome():
+def welcome(rid=None):
     """Renders welcome template with queried data"""
     # Print tracing statement
     print("welcome() function called")
@@ -322,22 +324,34 @@ def welcome():
     if not verify_login(skey):
         return redirect(url_for('root'))
     
+    # Define reminder query
+    rem_query = f"""
+        SELECT
+            reminder_id, task_name,
+            category, task_date
+        FROM reminders AS r
+        WHERE r.user_id IN (
+            SELECT user_id
+            FROM sessions
+            WHERE sessions.session_key = '{skey}'
+
+    """
+
+    # Check if there is a search term and modify the query accordingly
+    try:
+        keyword = request.form["keyword"]
+    except Exception as e:
+        keyword = None
+
+    if keyword is not None and keyword != '':
+        rem_query += f" AND (r.category LIKE '%{keyword}%' OR r.task_name LIKE '%{keyword}%')"
+    
+    # Add final closing parenthesis regardless of keyword
+    rem_query += "\n)"
+    
     # Pull list of reminders
     try:
-        reminders = db.session.execute(sa.text(
-            f"""
-                SELECT
-                    reminder_id, task_name,
-                    category, task_date
-                FROM reminders AS r
-                WHERE r.user_id IN (
-                    SELECT user_id
-                    FROM sessions
-                    WHERE sessions.session_key = '{skey}'
-                )
-            """
-        )).all()
-        
+        reminders = db.session.execute(sa.text(rem_query)).all()
         # Print results if successful
         print("welcome() pull reminders:")
         print(reminders)
@@ -346,35 +360,26 @@ def welcome():
         # Make empty list to prevent NameErrors
         reminders = []
 
-    # Pull username
-    try:
-        # Run query
-        un = db.session.execute(sa.text(
-            f"""
-                SELECT
-                    u.user_name
-                FROM
-                    users AS u
-                WHERE u.user_id IN (
-                    SELECT user_id
-                    FROM sessions AS s
-                    WHERE s.session_key = '{skey}'
-                )
-            """
-        )).all()[0][0]
-        # Print username if pull is successful
-        print("welcome() username:\t" + str(un))
-    except Exception as e:
-        print("welcome() could not pull username:\n" + str(e))
-        # Set None to prevent NameError
-        un = None
+    # Handle delete query
+    del_query = f"DELETE FROM reminders WHERE reminder_id = '{rid}'"
+    print('del_query:\n' + del_query)
+    if rid is not None:
+        try:
+            # Execute delete query
+            db.session.execute(sa.text(del_query))
+            # Commit changes
+            db.session.commit()
+            # Trace statement for debugging
+            # print(f"Reminder no: {rid} deleted")
+            # Clear url to avoid recursion
+            return redirect(url_for("welcome"))
+        except Exception as e:
+            # Tracing statement for debugging
+            print(f"Reminder no: {rid} could not be deleted")
+            # Clear url
+            return redirect(url_for("welcome"))
 
-    # Print statements for debugging.
-    print("welcome() reminders:")
-    print(reminders)
-    print(f"welcome() username:\t{str(un)}")
-
-    return render_template("welcome.html", reminders=reminders, username=un, skey=skey)
+    return render_template("welcome.html", reminders=reminders, skey=skey)
 
 
 # @app.route("/create_task/<skey>", methods=["GET", "POST"])
