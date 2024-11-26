@@ -53,28 +53,32 @@
                             <tr>
                                 <th>ID</th>
                                 <th>Task Name</th>
+                                <th>Task Category</th>
                                 <th>Task Date</th>
                                 <th>Operation</th>
                             </tr>
                         </thead>
                         <tbody>
+                            {% for r in reminders %}
                             <tr>
-                                <td>example1</td>
-                                <td>example2</td>
-                                <td>example3</td>
+                                <td>{{ r.reminder_id }}</td>
+                                <td>{{ r.task_name }}</td>
+                                <td>{{ r.category }}</td>
+                                <td>{{ r.task_date }}</td>
                                 <td>
                                     <ul class="list-unstyled m-0 p-0">
-                                        <li> <a href="view_task.html" class="btn btn-link text-primary text-decoration-underline btn-sm p-0">
+                                        <li> <a href="{{ url_for('view_task', rid=r.reminder_id )}}" class="btn btn-link text-primary text-decoration-underline btn-sm p-0">
 											View Detail
 										</a></li>
-                                        <li><button class="btn btn-link text-primary text-decoration-underline btn-sm p-0">Delete</button>
+                                        <li><a class="btn btn-link text-primary text-decoration-underline btn-sm p-0" href="/welcome/delete/{{ r.reminder_id }}">Delete</a>
                                         </li>
-                                        <li><a href="update_task.html" class="btn btn-link text-primary text-decoration-underline btn-sm p-0">
-										Update</a></button>
+                                        <li>
+                                            <a href="update_task.html" class="btn btn-link text-primary text-decoration-underline btn-sm p-0">Update</a>
                                         </li>
                                     </ul>
-                                </td>
+                                </td>                                
                             </tr>
+                            {% endfor %}
                         </tbody>
                     </table>
                 </div>
@@ -85,13 +89,15 @@
 		<div class="row mt-3 align-items-center d-flex justify-content-between">
             <!-- Create Task Button on the Left -->
             <div class="col-auto">
-                <a href="create_task.html" class="btn btn-success btn-sm">Create Task</a>
+                <a href="{{ url_for('create_task') }}" class="btn btn-success btn-sm">Create Task</a>
             </div>
             
             <!-- Keyword Input and Search Button on the Right -->
             <div class="d-flex align-items-center col-auto">
-                <input type="text" class="form-control form-control-sm me-2" id="keyword" name="keyword" placeholder="Enter Keyword...">
-                <button type="button" class="btn btn-secondary btn-sm">Search</button>
+                <form method="POST">
+                    <input type="text" class="form-control form-control-sm me-2" id="keyword" name="keyword" placeholder="Enter Keyword...">
+                    <input type="submit" class="btn btn-secondary btn-sm" formaction="{{ url_for('welcome') }}" value="Search"></button>
+                </form>
             </div>
         </div>
 

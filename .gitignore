@@ -1,0 +1,15 @@
+*.swp
+flask/__pycache__
+flask/__pycache__/*
+flask/__pycache__/**
+**/__pycache__
+
+flask/instance
+flask/instance/*
+flask/app.py.reference
+
+instance
+instance/*
+
+.vscode/**
+.vscode

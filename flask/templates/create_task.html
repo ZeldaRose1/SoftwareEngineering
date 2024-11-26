@@ -13,7 +13,12 @@
 <body>
     <div class="container mt-5">
         <h1 class="mb-4 ">Create Task</h1>
-        <form id="createTask" name="createTask" method="POST" action=welcome.html>
+        <form id="createTask" name="createTask" method="POST" action={{ url_for("create_task") }}>
+            <div class="mb-3">
+                <label for="taskName">Task Name</label>
+                <input name="taskName" id="taskName" />
+            </div>
+            
             <div class="mb-3">
                 <label for="CategoryName">New Category</label>
                 <input name="CategoryName" id="CategoryName" />
@@ -23,8 +28,9 @@
                 <label for="Category">Select Category</label>
                 <select id="Category" name="Category">
                     <option value="">Choose...</option>
-                    <option value="Option1">Option 1</option>
-                    <option value="Option2">Option 2</option>
+                    {% for c in category %}
+                    <option value="{{ c.category }}"> {{ c.category }}</option>
+                    {% endfor %}
                 </select>
 
                 <input class="form-check-input" type="checkbox" id="enableCategory" name="enableCategory">
@@ -32,17 +38,17 @@
             </div>
 
             <div class="mb-3">
-                <label for="Category">Set Reminder</label>
-                <select id="Category" name="Category">
+                <label for="Time">Set Reminder</label>
+                <select id="Time" name="Time">
                     <option value="">Reminder...</option>
                     <option value="Option1">5 minutes before</option>
                     <option value="Option2">15 minutes before</option>
-                    <option value="Option2">30 minutes before</option>
-                    <option value="Option2">1 hour before</option>
-                    <option value="Option2">1 day before</option>
+                    <option value="Option3">30 minutes before</option>
+                    <option value="Option4">1 hour before</option>
+                    <option value="Option5">1 day before</option>
                 </select>
-                <input class="form-check-input" type="checkbox" id="enableCategory" name="enableCategory">
-                <label class="form-check-label" for="enableCategory">Enable</label>
+                <input class="form-check-input" type="checkbox" id="enableTime" name="enableTime">
+                <label class="form-check-label" for="enableTime">Enable</label>
             </div>
             <div class="form-check form-check-inline">
                 <input class="form-check-input" type="checkbox" id="Email" name="Email">
@@ -56,7 +62,7 @@
 
             <div class="mb-3">
                 <label for="datePicker">Select a Date:</label>
-                <input type="date" id="datePicker" name="datePicker">
+                <input type="datetime-local" id="datePicker" name="datePicker">
             </div>
 
             <div class="mb-3">
