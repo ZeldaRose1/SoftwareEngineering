@@ -1,22 +1,18 @@
 #!/usr/bin/python3
 
 from datetime import datetime, timedelta
-import os
+# import os
 import random
 import string
 
-import flask
-from flask import render_template, request, redirect, url_for
-from flask import session
+from modules import create_app
+from modules.database import db, Users, Reminders, Sessions
 from flask_sqlalchemy import SQLAlchemy
 import sqlalchemy as sa
 from sqlalchemy.orm import DeclarativeBase  # For creating table definitions
-
-
-# <codecell> Class definitions
-class Base(DeclarativeBase):
-    """Class exists to create tables"""
-    pass
+import flask
+from flask import render_template, request, redirect, url_for
+from flask import session
 
 
 def create_session(uid):
@@ -46,10 +42,11 @@ def login_function(username, password):
     Returns the skey if session create else None
     """
     print("login_function() called")
-    
+
     # result = db.session.execute(db.select(Users).where(Users.user_name==username).where(Users.password==password)).all()
     # result = Users.query.filter_by(user_name=username, password=password).all()
-    result = db.session.query(Users.user_id).filter((Users.user_name == username) & (Users.password == password)).all()
+    result = db.session.query(Users.user_id).filter(
+        (Users.user_name == username) & (Users.password == password)).all()
     print("login_function()results:")
     print(result)
 
@@ -85,8 +82,8 @@ def create_user_function(username, password, email):
     if email is None or email == "":
         print("create_user_function() invalid email:\t" + str(email))
         return render_template("create_user.html")
-    
-    user=Users(user_name=username, password=password, email=email)
+
+    user = Users(user_name=username, password=password, email=email)
     try:
         # Add user to users table.
         db.session.add(user)
@@ -107,8 +104,9 @@ def verify_login(skey):
     """
     print("verify_login() called")
     # Pull session from sessions table
-    result = db.session.query(Sessions.session_end).filter(Sessions.session_key == skey).all()
-    
+    result = db.session.query(Sessions.session_end).filter(
+        Sessions.session_key == skey).all()
+
     print("verify_login() result:" + str(result))
     # Verify there is at least one row
     if len(result) == 0:
@@ -174,7 +172,7 @@ def create_task_function(skey, category, name, task_date, rem_date, email, sms, 
         print("could not pull uid:\n" + str(e))
         # Session could not be verified; terminate function with fail
         return False
-    
+
     # Pull reminder id
     try:
         r_seq = db.session.execute(sa.text(
@@ -214,58 +212,11 @@ def create_task_function(skey, category, name, task_date, rem_date, email, sms, 
 
 
 # <codecell> Initialize items and set parameters
-# Initialize database
-db = SQLAlchemy(model_class=Base)
-
 # Initialize flask app
-app = flask.Flask(__name__)
-# Initialize secret key for session management
-app.secret_key = "CHANGEME"
-
-# Configure SQLite db, relative to app instance folder
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///database.db"
-
-# Initialize app with db extension (does not create database.db yet, but does create instance folder)
-db.init_app(app)
-
-# <codecell> Define tables as sub-classes of db.Model
-class Users(db.Model):
-    __tablename__ = "users"
-
-    user_id = sa.Column(sa.Integer, primary_key=True, nullable=False, autoincrement=True, unique=True)
-    user_name = sa.Column(sa.String, nullable=False, unique=True)
-    password = sa.Column(sa.String, nullable=False)
-    email = sa.Column(sa.String)
-    isadmin = sa.Column(sa.Boolean, default=False)
-
-
-class Sessions(db.Model):
-    """Table to track user logins"""
-    __tablename__ = 'sessions'
-    user_id = sa.Column(sa.Integer, sa.ForeignKey("users.user_id"), primary_key=True, nullable=False)
-    session_key = sa.Column(sa.String, primary_key=True, nullable=False, unique=True)
-    session_start = sa.Column(sa.DateTime, nullable=False)
-    session_end = sa.Column(sa.DateTime, nullable=True)
-
-
-class Reminders(db.Model):
-    __tablename__ = "reminders"
-    user_id = sa.Column(sa.Integer, sa.ForeignKey("users.user_id"), primary_key=True, nullable=False)
-    reminder_id = sa.Column(sa.Integer, primary_key=True, nullable=False)
-    task_name = sa.Column(sa.String)
-    category = sa.Column(sa.String)
-    task_date = sa.Column(sa.DateTime)
-    reminder_dtm = sa.Column(sa.DateTime)
-    email = sa.Column(sa.Boolean)
-    sms = sa.Column(sa.Boolean)
-    note = sa.Column(sa.String)
-
-
-# Initialize database and create tables
-with app.app_context():
-    db.create_all()
+app = create_app()
 
 # <codecell> Start programming the webpage routing
+
 
 @app.route("/", methods=["GET", "POST"])
 def root():
@@ -276,7 +227,7 @@ def root():
     except:
         un = None
         pw = None
-    
+
     if un is not None and pw is not None:
         # Pull session key
         skey = login_function(un, pw)
@@ -292,7 +243,7 @@ def create_user():
     """Takes input from request forms and adds new user to database."""
 
     # TODO: Implement a creation success message
-    
+
     # Attempt to pull values from variables
     try:
         un = request.form['username']
@@ -302,7 +253,7 @@ def create_user():
         un = None
         pw = None
         email = None
-    
+
     # Check if input is filled in
     if un is not None and pw is not None and email is not None:
         # Call function to create the user
@@ -310,7 +261,7 @@ def create_user():
     else:
         # Render html template
         return render_template("create_user.html")
-    
+
 
 @app.route("/welcome/delete/<rid>", methods=["GET", "POST"])
 @app.route("/welcome", methods=["GET", "POST"])
@@ -323,7 +274,7 @@ def welcome(rid=None):
     # Verify login
     if not verify_login(skey):
         return redirect(url_for('root'))
-    
+
     # Define reminder query
     rem_query = f"""
         SELECT
@@ -344,11 +295,12 @@ def welcome(rid=None):
         keyword = None
 
     if keyword is not None and keyword != '':
-        rem_query += f" AND (r.category LIKE '%{keyword}%' OR r.task_name LIKE '%{keyword}%')"
-    
+        rem_query += f" AND (r.category LIKE '%{
+            keyword}%' OR r.task_name LIKE '%{keyword}%')"
+
     # Add final closing parenthesis regardless of keyword
     rem_query += "\n)"
-    
+
     # Pull list of reminders
     try:
         reminders = db.session.execute(sa.text(rem_query)).all()
@@ -390,7 +342,7 @@ def create_task():
     print("Create_task() called")
     # Pull skey from session
     skey = session.get("skey")
-    
+
     # Pull variables from form
     try:
         t_name = request.form["taskName"]
@@ -405,7 +357,7 @@ def create_task():
         use_existing_cat = True
     except:
         use_existing_cat = False
-    try: 
+    try:
         reuse_category = request.form["Category"]
     except:
         reuse_category = None
@@ -420,15 +372,20 @@ def create_task():
     try:
         reminder_time = request.form["Time"]
         if reminder_time == "Option1":
-            reminder_time = timedelta(minutes = -5) + datetime.strptime(tdate, "%Y-%m-%dT%H:%M")
+            reminder_time = timedelta(minutes=-5) + \
+                datetime.strptime(tdate, "%Y-%m-%dT%H:%M")
         if reminder_time == "Option2":
-            reminder_time = timedelta(minutes = -15) + datetime.strptime(tdate, "%Y-%m-%dT%H:%M")
+            reminder_time = timedelta(minutes=-15) + \
+                datetime.strptime(tdate, "%Y-%m-%dT%H:%M")
         if reminder_time == "Option3":
-            reminder_time = timedelta(minutes = -30) + datetime.strptime(tdate, "%Y-%m-%dT%H:%M")
+            reminder_time = timedelta(minutes=-30) + \
+                datetime.strptime(tdate, "%Y-%m-%dT%H:%M")
         if reminder_time == "Option4":
-            reminder_time = timedelta(hours = -1) + datetime.strptime(tdate, "%Y-%m-%dT%H:%M")
+            reminder_time = timedelta(
+                hours=-1) + datetime.strptime(tdate, "%Y-%m-%dT%H:%M")
         if reminder_time == "Option5":
-            reminder_time = timedelta(hours = -24) + datetime.strptime(tdate, "%Y-%m-%dT%H:%M")
+            reminder_time = timedelta(
+                hours=-24) + datetime.strptime(tdate, "%Y-%m-%dT%H:%M")
     except Exception as e:
         print("Error fixing reminder time:\n" + str(e))
         reminder_time = None
@@ -470,22 +427,23 @@ def create_task():
     # If reuse category is checked reassign the category var
     if use_existing_cat is True and reuse_category != "":
         new_cat = reuse_category
-    
+
     # Check reminder is enabled; if not disable email and sms
     if not reminder_b:
         email_b = False
         sms_b = False
-    
+
     # Pull all categories in database
-    categories = db.session.execute(sa.text("""SELECT DISTINCT category FROM reminders""")).all()
+    categories = db.session.execute(
+        sa.text("""SELECT DISTINCT category FROM reminders""")).all()
     print("Categories:")
     print(categories)
 
     # Check for all necessary values to create a reminder
     if ((new_cat is not None and new_cat != "") and
         (t_name is not None and t_name != "") and
-        (tdate is not None)
-    ):
+                (tdate is not None)
+        ):
         if create_task_function(
             skey,
             new_cat,
@@ -497,7 +455,7 @@ def create_task():
             task_note
         ):
             return redirect(url_for("welcome"))
-    
+
     return render_template("create_task.html", skey=skey, category=categories)
 
 
@@ -532,5 +490,4 @@ def view_task(rid):
 print('script finished')
 
 if __name__ == "__main__":
-        app.run()
- 
+    app.run()
