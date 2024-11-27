@@ -13,9 +13,17 @@ from flaskapp.modules.database import db, Users, Sessions
 
 def create_session(uid):
     """
-    Creates a new session in the session table corresponding to the user id
+    Create a new session in the session table corresponding to the user id
     """
+    # Validate user id exists in user table
+    u_check = db.session.query(Users.user_id).\
+        where(Users.user_id == uid).all()
+    if len(u_check) == 0:
+        raise ValueError("User ID not found in user table")
+
+    # Generate random string for session
     sk = ''.join(random.choice(string.ascii_lowercase) for i in range(80))
+    # Create session object
     ses = Sessions(
         user_id=uid,
         session_key=sk,
@@ -23,12 +31,14 @@ def create_session(uid):
         session_end=None
     )
     try:
+        # Push to database
         db.session.add(ses)
         db.session.commit()
         print('Session created')
         return sk
     except Exception as e:
         print(str(e) + "\n\nCould not create session")
+        return None
 
 
 # <codecell> function definitions
