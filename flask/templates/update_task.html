@@ -12,7 +12,7 @@
 
 <body>
     <div class="container mt-5">
-        <form id="createTask" name="createTask" method="POST" action=welcome.html>
+        <form id="createTask" name="createTask" method="POST" action="{{ url_for('update_task', rid=task.reminder_id) }}">
             <div class="mb-3">
                 <label for="CategoryName">New Category</label>
                 <input name="CategoryName" id="CategoryName" required type="text" />
