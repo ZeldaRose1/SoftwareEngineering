@@ -4,6 +4,9 @@ from datetime import datetime, timedelta
 # import os
 import random
 import string
+import smtplib
+import ssl
+import atexit
 
 from modules import create_app
 from modules.database import db, Users, Reminders, Sessions
@@ -13,6 +16,9 @@ from sqlalchemy.orm import DeclarativeBase  # For creating table definitions
 import flask
 from flask import render_template, request, redirect, url_for
 from flask import session
+from email.message import EmailMessage
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.interval import IntervalTrigger
 
 
 def create_session(uid):
@@ -209,9 +215,46 @@ def create_task_function(skey, category, name, task_date, rem_date, email, sms, 
     except Exception as e:
         print("Reminder creation failed:\n" + str(e))
         return False
+    
+def send_email():
+
+    #skey = session.get('skey')
+    now = datetime.now()
+
+    # Define reminder query
+    rem_query = f"""
+        SELECT *
+        FROM reminders
+    """
+
+    try:
+        reminders = db.session.execute(sa.text(rem_query)).all()
+        # Print results if successful
+    except Exception as e:
+        # Make empty list to prevent NameErrors
+        reminders = []
+
+    email_sender = 'sender@email'
+    email_password = 'sender@password'
+    email_receiver = 'receiver@email'
+
+    subject = 'testing'
+    # Debugging by sending variables
+    body = f"""testing: {rem_query} {reminders} {now}"""
+
+    em = EmailMessage()
+    em['From'] = email_sender
+    em['To'] = email_receiver
+    em['Subject'] = subject
+    em.set_content(body)
+
+    context = ssl.create_default_context()
+
+    with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=context) as smtp:
+        smtp.login(email_sender, email_password)
+        smtp.sendmail(email_sender, email_receiver, em.as_string())
 
 
-# <codecell> Initialize items and set parameters
 # Initialize flask app
 app = create_app()
 
@@ -311,6 +354,19 @@ def welcome(rid=None):
         print("welcome() reminder pull failed\n" + str(e))
         # Make empty list to prevent NameErrors
         reminders = []
+
+    scheduler = BackgroundScheduler()
+    scheduler.start()
+
+    scheduler.add_job(
+        func=send_email,
+        trigger=IntervalTrigger(seconds = 5),
+        id='send_email_id',
+        name='Send Email',
+        replace_existing=True
+    )
+
+    atexit.register(lambda: scheduler.shutdown())
 
     # Handle delete query
     del_query = f"DELETE FROM reminders WHERE reminder_id = '{rid}'"
@@ -485,7 +541,6 @@ def view_task(rid):
 
     # Render template with task details.
     return render_template("view_task.html", task=task)
-
 
 print('script finished')
 
