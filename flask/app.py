@@ -6,7 +6,7 @@ import random
 import string
 import smtplib
 import ssl
-import atexit
+import threading
 
 from modules import create_app
 from modules.database import db, Users, Reminders, Sessions
@@ -17,8 +17,6 @@ import flask
 from flask import render_template, request, redirect, url_for
 from flask import session
 from email.message import EmailMessage
-from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.interval import IntervalTrigger
 
 
 def create_session(uid):
@@ -216,31 +214,15 @@ def create_task_function(skey, category, name, task_date, rem_date, email, sms, 
         print("Reminder creation failed:\n" + str(e))
         return False
     
-def send_email():
+def send_email(name, category, note, email):
 
-    #skey = session.get('skey')
-    now = datetime.now()
+    email_sender = 'uconotificaitons@gmail.com'
+    email_password = 'oqya mzhd rvmf apoi'
+    email_receiver = email
 
-    # Define reminder query
-    rem_query = f"""
-        SELECT *
-        FROM reminders
-    """
-
-    try:
-        reminders = db.session.execute(sa.text(rem_query)).all()
-        # Print results if successful
-    except Exception as e:
-        # Make empty list to prevent NameErrors
-        reminders = []
-
-    email_sender = 'sender@email'
-    email_password = 'sender@password'
-    email_receiver = 'receiver@email'
-
-    subject = 'testing'
+    subject = name
     # Debugging by sending variables
-    body = f"""testing: {rem_query} {reminders} {now}"""
+    body = f"""Category:  {category}\n Note: {note}"""
 
     em = EmailMessage()
     em['From'] = email_sender
@@ -353,20 +335,35 @@ def welcome(rid=None):
     except Exception as e:
         print("welcome() reminder pull failed\n" + str(e))
         # Make empty list to prevent NameErrors
-        reminders = []
+        reminders = []   
 
-    scheduler = BackgroundScheduler()
-    scheduler.start()
+    def sendnotificaitons():
 
-    scheduler.add_job(
-        func=send_email,
-        trigger=IntervalTrigger(seconds = 5),
-        id='send_email_id',
-        name='Send Email',
-        replace_existing=True
-    )
+        threading.Timer(5.0, sendnotificaitons).start()
 
-    atexit.register(lambda: scheduler.shutdown())
+        notifications_query = f"""
+            SELECT *
+            FROM reminders join users on reminders.user_id = users.user_id
+        """
+
+        engine = sa.create_engine("sqlite:///instance/database.db")
+        with engine.connect() as con:
+            notifications = con.execute(sa.text( notifications_query )).all()
+            for reminder in notifications:
+                if reminder[5] != 'None' and reminder[6] == 1:
+                    if datetime.strptime(reminder[5], '%Y-%m-%d %H:%M:%S') < datetime.now():
+                        send_email(reminder[2], reminder[3], reminder[8], reminder[12])
+
+                        disable_notification = f"""
+                            UPDATE reminders
+                            SET email = 0
+                            WHERE reminder_id = {reminder[1]}
+                        """
+
+                        con.execute(sa.text( disable_notification ))
+                        con.commit()
+
+    sendnotificaitons()
 
     # Handle delete query
     del_query = f"DELETE FROM reminders WHERE reminder_id = '{rid}'"
