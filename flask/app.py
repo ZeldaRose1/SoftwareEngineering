@@ -17,7 +17,6 @@ import flask
 from flask import render_template, request, redirect, url_for
 from flask import session
 from email.message import EmailMessage
-from twilio.rest import Client
 
 
 def create_session(uid):
