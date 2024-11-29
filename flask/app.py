@@ -236,6 +236,9 @@ def send_email(name, category, note, email):
         smtp.login(email_sender, email_password)
         smtp.sendmail(email_sender, email_receiver, em.as_string())
 
+def send_sms():
+    print("sms sent")
+
 
 # Initialize flask app
 app = create_app()
@@ -339,7 +342,7 @@ def welcome(rid=None):
 
     def sendnotificaitons():
 
-        threading.Timer(5.0, sendnotificaitons).start()
+        threading.Timer(15.0, sendnotificaitons).start()
 
         notifications_query = f"""
             SELECT *
@@ -350,18 +353,30 @@ def welcome(rid=None):
         with engine.connect() as con:
             notifications = con.execute(sa.text( notifications_query )).all()
             for reminder in notifications:
-                if reminder[5] != 'None' and reminder[6] == 1:
+                if reminder[5] != 'None':
                     if datetime.strptime(reminder[5], '%Y-%m-%d %H:%M:%S') < datetime.now():
-                        send_email(reminder[2], reminder[3], reminder[8], reminder[12])
+                        if reminder[6] == 1:
+                            send_email(reminder[2], reminder[3], reminder[8], reminder[12])
 
-                        disable_notification = f"""
-                            UPDATE reminders
-                            SET email = 0
-                            WHERE reminder_id = {reminder[1]}
-                        """
+                            disable_notification = f"""
+                                UPDATE reminders
+                                SET email = 0
+                                WHERE reminder_id = {reminder[1]}
+                            """
 
-                        con.execute(sa.text( disable_notification ))
-                        con.commit()
+                            con.execute(sa.text( disable_notification ))
+                            con.commit()
+                        if reminder[7] == 1:
+                            send_sms()
+
+                            disable_notification = f"""
+                                UPDATE reminders
+                                SET sms = 0
+                                WHERE reminder_id = {reminder[1]}
+                            """
+
+                            con.execute(sa.text( disable_notification ))
+                            con.commit()
 
     sendnotificaitons()
 
