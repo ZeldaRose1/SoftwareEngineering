@@ -17,6 +17,7 @@ import flask
 from flask import render_template, request, redirect, url_for
 from flask import session
 from email.message import EmailMessage
+from twilio.rest import Client
 
 
 def create_session(uid):
@@ -236,9 +237,6 @@ def send_email(name, category, note, email):
         smtp.login(email_sender, email_password)
         smtp.sendmail(email_sender, email_receiver, em.as_string())
 
-def send_sms():
-    print("sms sent")
-
 
 # Initialize flask app
 app = create_app()
@@ -361,17 +359,6 @@ def welcome(rid=None):
                             disable_notification = f"""
                                 UPDATE reminders
                                 SET email = 0
-                                WHERE reminder_id = {reminder[1]}
-                            """
-
-                            con.execute(sa.text( disable_notification ))
-                            con.commit()
-                        if reminder[7] == 1:
-                            send_sms()
-
-                            disable_notification = f"""
-                                UPDATE reminders
-                                SET sms = 0
                                 WHERE reminder_id = {reminder[1]}
                             """
 
