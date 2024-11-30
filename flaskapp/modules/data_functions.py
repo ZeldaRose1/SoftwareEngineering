@@ -1,15 +1,19 @@
+# First party imports
 from datetime import datetime, timedelta
-# import os
 import random
 import string
+import ssl
+import atexit
+import smtplib
+from email.message import EmailMessage
 
+# Third party imports
 import sqlalchemy as sa
 from flask import render_template, redirect, url_for
-
-# from modules.config import ProductionConfig
-# from modules.__init__ import create_app
 from flaskapp.modules.database import db, Users, Sessions
-# from flaskapp.modules.__init__ import db
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.interval import IntervalTrigger
+
 
 def create_session(uid):
     """
@@ -215,3 +219,45 @@ def create_task_function(skey, category, name, task_date, rem_date, email, sms, 
     except Exception as e:
         print("Reminder creation failed:\n" + str(e))
         return False
+
+
+def send_email():
+    """Send email based on reminders table"""
+    # Pull current datetime
+    now = datetime.now()
+
+    # Define reminder query
+    rem_query = """
+        SELECT *
+        FROM reminders
+    """
+
+    try:
+        # Pull all reminders from table
+        reminders = db.session.execute(sa.text(rem_query)).all()
+    except Exception:
+        # Define reminders as an empty list to avoid NameError
+        reminders = []
+
+    # Define email parameters
+    email_sender = 'sender@email'
+    email_password = 'sender@password'
+    email_receiver = 'receiver@email'
+
+    subject = 'Reminder'
+    # Debugging by sending variables
+    body = f"""Reminder: {rem_query} {reminders} {now}"""
+
+    # Initialize email object and define variables
+    em = EmailMessage()
+    em['From'] = email_sender
+    em['To'] = email_receiver
+    em['Subject'] = subject
+    em.set_content(body)
+
+    # Create ssl context
+    context = ssl.create_default_context()
+
+    with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=context) as smtp:
+        smtp.login(email_sender, email_password)
+        smtp.sendmail(email_sender, email_receiver, em.as_string())
