@@ -5,61 +5,64 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Update Task</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
-        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
-
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 
 <body>
     <div class="container mt-5">
         <form id="createTask" name="createTask" method="POST" action="{{ url_for('update_task', rid=task.reminder_id) }}">
             <div class="mb-3">
-                <label for="CategoryName">New Category</label>
-                <input name="CategoryName" id="CategoryName" required type="text" />
+                <label for="TaskName">Task Name</label>
+                <input name="TaskName" id="TaskName" required type="text" value="{{ task.task_name }}" />
             </div>
 
             <div class="mb-3">
-                <label for="Category">Select Category</label>
-                <select id="Category" name="Category">
+                <label for="Category">Category</label>
+                <select id="Category" name="Category" onchange="toggleNewCategoryInput(this)">
                     <option value="">Choose...</option>
-                    <option value="Option1">Option 1</option>
-                    <option value="Option2">Option 2</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat[0] }}" {% if cat[0] == task.category %}selected{% endif %}>
+                        {{ cat[0] }}
+                    </option>
+                    {% endfor %}
+                    <option value="new">Create New Category</option>
                 </select>
-
-                <input class="form-check-input" type="checkbox" id="enableCategory" name="enableCategory">
-                <label class="form-check-label" for="enableCategory">Enable</label>
             </div>
-
-            <div class="mb-3">
-                <label for="Category">Set Reminder</label>
-                <select id="Category" name="Category">
-                    <option value="">Reminder...</option>
-                    <option value="Option1">5 minutes before</option>
-                    <option value="Option2">15 minutes before</option>
-                    <option value="Option2">30 minutes before</option>
-                    <option value="Option2">1 hour before</option>
-                    <option value="Option2">1 day before</option>
-                </select>
-                <input class="form-check-input" type="checkbox" id="enableCategory" name="enableCategory">
-                <label class="form-check-label" for="enableCategory">Enable</label>
+            
+            <div class="mb-3" id="newCategoryDiv" style="display: none;">
+                <label for="NewCategoryName">New Category</label>
+                <input name="NewCategoryName" id="NewCategoryName" type="text" />
             </div>
+            
+            <script>
+            function toggleNewCategoryInput(select) {
+                const newCategoryDiv = document.getElementById("newCategoryDiv");
+                if (select.value === "new") {
+                    newCategoryDiv.style.display = "block";
+                } else {
+                    newCategoryDiv.style.display = "none";
+                }
+            }
+            </script>
+                      
+
             <div class="form-check form-check-inline">
-                <input class="form-check-input" type="checkbox" id="Email" name="Email">
+                <input class="form-check-input" type="checkbox" id="Email" name="Email" {% if task.email %}checked{% endif %}>
                 <label class="form-check-label" for="Email">Email</label>
             </div>
 
             <div class="form-check form-check-inline">
-                <input class="form-check-input" type="checkbox" id="SMS" name="SMS">
+                <input class="form-check-input" type="checkbox" id="SMS" name="SMS" {% if task.sms %}checked{% endif %}>
                 <label class="form-check-label" for="SMS">SMS</label>
             </div>
 
             <div class="mb-3">
                 <label for="datePicker">Select a Date:</label>
-                <input type="date" id="datePicker" name="datePicker">
+                <input type="date" id="datePicker" name="datePicker" value="{{ task.task_date|tojson|safe }}" />
             </div>
 
             <div class="mb-3">
-                <textarea id="AddNote" name="AddNote" style="width: 200px; height: 150px;">Add Note......</textarea>
+                <textarea id="AddNote" name="AddNote" style="width: 200px; height: 150px;">{{ task.note }}</textarea>
             </div>
 
             <div class="container mt-3 text-start">
@@ -68,9 +71,7 @@
         </form>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
-        integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
-        crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 
 </html>

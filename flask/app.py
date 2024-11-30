@@ -488,25 +488,30 @@ def view_task(rid):
 
 @app.route("/update_task/<rid>", methods=["GET", "POST"])
 def update_task(rid):
-    """
-    Handles updating a specific task by reminder ID.
-    """
     skey = session.get("skey")
 
     if not verify_login(skey):
         return redirect(url_for("root"))
 
     if request.method == "POST":
-        category = request.form.get("CategoryName", "")
+        task_name = request.form.get("TaskName", "")
+        category = request.form.get("Category", "")
+        new_category_name = request.form.get("NewCategoryName", "")
+
+        if category == "new" and new_category_name.strip():
+            category = new_category_name.strip()
+
         task_date = request.form.get("datePicker", "")
         email = request.form.get("Email", False)
         sms = request.form.get("SMS", False)
         note = request.form.get("AddNote", "")
+
         try:
             update_query = sa.text(
                 """
                 UPDATE reminders
-                SET category = :category,
+                SET task_name = :task_name,
+                    category = :category,
                     task_date = :task_date,
                     email = :email,
                     sms = :sms,
@@ -517,6 +522,7 @@ def update_task(rid):
             db.session.execute(
                 update_query,
                 {
+                    "task_name": task_name,
                     "category": category,
                     "task_date": task_date,
                     "email": email,
@@ -528,26 +534,29 @@ def update_task(rid):
             db.session.commit()
             return redirect(url_for("welcome"))
         except Exception as e:
-            print(f"Error updating task: {e}")
             return render_template("update_task.html", task=None)
+
     try:
         task_query = sa.text(
             """
-            SELECT reminder_id, category, task_name, task_date, note, reminder_dtm
+            SELECT reminder_id, task_name, category, task_date, note, reminder_dtm
             FROM reminders
             WHERE reminder_id = :rid
             """
         )
         task = db.session.execute(task_query, {"rid": rid}).fetchone()
     except Exception as e:
-        print(f"Error fetching task details: {e}")
         task = None
 
     if task is None:
-        print(f"Task with ID {rid} not found!")
         return redirect(url_for("welcome"))
 
-    return render_template("update_task.html", task=task)
+    categories = db.session.execute(
+        sa.text("SELECT DISTINCT category FROM reminders")
+    ).all()
+
+    return render_template("update_task.html", task=task, categories=categories)
+
 
 print(app.url_map)
 print('script finished')
