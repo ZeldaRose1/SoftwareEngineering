@@ -86,7 +86,7 @@ def assign_routes(app):
         # Check if there is a search term and modify the query accordingly
         try:
             keyword = request.form["keyword"]
-        except Exception as e:
+        except Exception:
             keyword = None
 
         if keyword is not None and keyword != '':
@@ -98,7 +98,7 @@ def assign_routes(app):
             """
 
         # Start notification loop
-        send_notifications()
+        # send_notifications()
 
         # Add final closing parenthesis regardless of keyword
         rem_query += "\n)"
@@ -146,33 +146,14 @@ def assign_routes(app):
         skey = session.get("skey")
 
         # Pull variables from form
-        try:
-            t_name = request.form["taskName"]
-        except:
-            t_name = None
-        try:
-            new_cat = request.form["CategoryName"]
-        except:
-            new_cat = None
-        try:
-            use_existing_cat = request.form["enableCategory"]
-            use_existing_cat = True
-        except:
-            use_existing_cat = False
-        try:
-            reuse_category = request.form["Category"]
-        except:
-            reuse_category = None
-        try:
-            tdate = request.form["datePicker"]
-        except:
-            tdate = None
-        try:
-            task_note = request.form["AddNote"]
-        except:
-            task_note = None
-        try:
-            reminder_time = request.form["Time"]
+        if request.method == "POST":
+            t_name = request.form.get("taskName", None)
+            new_cat = request.form.get("CategoryName", None)
+            use_existing_cat = request.form.get("enableCategory", False)
+            reuse_category = request.form.get("Category", None)
+            tdate = request.form.get("datePicker", None)
+            task_note = request.form.get("AddNote", None)
+            reminder_time = request.form.get("Time", None)
             if reminder_time == "Option1":
                 reminder_time = timedelta(minutes=-5) + \
                     datetime.strptime(tdate, "%Y-%m-%dT%H:%M")
@@ -188,43 +169,41 @@ def assign_routes(app):
             if reminder_time == "Option5":
                 reminder_time = timedelta(
                     hours=-24) + datetime.strptime(tdate, "%Y-%m-%dT%H:%M")
-        except Exception as e:
-            print("Error fixing reminder time:\n" + str(e))
+            reminder_b = request.form.get("enableTime", False)
+            email_b = request.form.get("Email", False)
+            sms_b = request.form.get("SMS", False)
+        else:
+            t_name = None
+            new_cat = None
+            use_existing_cat = None
+            reuse_category = None
+            tdate = None
+            task_note = None
             reminder_time = None
-        try:
-            reminder_b = request.form["enableTime"]
-            reminder_b = True
-        except:
-            reminder_b = False
-        try:
-            note_bool = request.form["enableTime"]
-            note_bool = True
-        except:
-            note_bool = False
-        try:
-            email_b = request.form["Email"]
-            if email_b is not None:
-                email_b = True
-        except:
-            email_b = False
-        try:
-            sms_b = request.form["SMS"]
-            if sms_b is not None:
-                sms_b = True
-        except:
-            sms_b = False
+            reminder_b = None
+            email_b = None
+            sms_b = None
 
-        print(t_name)
-        print(new_cat)
-        print(use_existing_cat)
-        print(reuse_category)
-        print(tdate)
-        print(task_note)
-        print("reminder_time:" + str(reminder_time))
-        print("reminder_b:\t" + str(reminder_b))
-        print(note_bool)
-        print(email_b)
-        print(sms_b)
+        # Verify boolean values are read as boolean
+        if reminder_b == "on":
+            reminder_b = True
+        if email_b == "on":
+            email_b = True
+        if sms_b == "on":
+            sms_b = True
+
+        # We have automatic testing so trace statements are unneeded
+        # print(t_name)
+        # print(new_cat)
+        # print(use_existing_cat)
+        # print(reuse_category)
+        # print(tdate)
+        # print(task_note)
+        # print("reminder_time:" + str(reminder_time))
+        # print("reminder_b:\t" + str(reminder_b))
+        # print(note_bool)
+        # print(email_b)
+        # print(sms_b)
 
         # If reuse category is checked reassign the category var
         if use_existing_cat is True and reuse_category != "":

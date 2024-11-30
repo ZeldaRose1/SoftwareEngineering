@@ -13,4 +13,12 @@ def test_login_function_valid(app):
         # Check skey length
         assert len(skey) == 80
 
-# TODO: test failed login
+
+def test_login_function_invalid(app):
+    """Verify None output on failed login"""
+    # Enable context to ensure proper db connection
+    with app.app_context():
+        # Call function
+        skey = login_function("acrowley", "therion")
+        # Check return data type
+        assert skey is None
