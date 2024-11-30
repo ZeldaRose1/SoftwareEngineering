@@ -283,3 +283,78 @@ def assign_routes(app):
 
         # Render template with task details.
         return render_template("view_task.html", task=task)
+
+    @app.route("/update_task/<rid>", methods=["GET", "POST"])
+    def update_task(rid):
+        """Handles updating a specific task by reminder ID."""
+        # Pull session key
+        skey = session.get("skey")
+
+        # Verify login is active
+        if not verify_login(skey):
+            return redirect(url_for("root"))
+
+        # Pull variables
+        if request.method == "POST":
+            category = request.form.get("CategoryName", "")
+            task_date = request.form.get("datePicker", "")
+            email = request.form.get("Email", False)
+            sms = request.form.get("SMS", False)
+            note = request.form.get("AddNote", "")
+            try:
+                # Save query
+                update_query = sa.text(
+                    """
+                    UPDATE reminders
+                    SET category = :category,
+                        task_date = :task_date,
+                        email = :email,
+                        sms = :sms,
+                        note = :note
+                    WHERE reminder_id = :rid
+                    """
+                )
+                # Execute query
+                db.session.execute(
+                    update_query,
+                    {
+                        "category": category,
+                        "task_date": task_date,
+                        "email": email,
+                        "sms": sms,
+                        "note": note,
+                        "rid": rid,
+                    },
+                )
+                # Save changes to database
+                db.session.commit()
+                # If update succeeds, return to welcome page
+                return redirect(url_for("welcome"))
+            except Exception as e:
+                # If update fails print error message
+                print(f"Error updating task: {str(e)}")
+                # Return to update task page
+                return render_template("update_task.html", task=None)
+        try:
+            # Query to pull reminder values from reminder id
+            task_query = sa.text(
+                """
+                SELECT reminder_id, category, task_name, task_date, note, reminder_dtm
+                FROM reminders
+                WHERE reminder_id = :rid
+                """
+            )
+            # Pull reminder
+            task = db.session.execute(task_query, {"rid": rid}).fetchone()
+        except Exception as e:
+            # Print error message if one exists
+            print(f"Error fetching task details: {str(e)}")
+            # Assign task to a variable to avoid NameError
+            task = None
+
+        if task is None:
+            print(f"Task with ID {rid} not found!")
+            return redirect(url_for("welcome"))
+
+        # Load HTML page
+        return render_template("update_task.html", task=task)
