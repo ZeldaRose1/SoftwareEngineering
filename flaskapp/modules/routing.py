@@ -10,6 +10,7 @@ from flaskapp.modules.data_functions import create_user_function
 from flaskapp.modules.data_functions import verify_login
 from flaskapp.modules.data_functions import create_task_function
 from flaskapp.modules.data_functions import db
+from flaskapp.modules.data_functions import send_notifications
 
 def assign_routes(app):
     @app.route("/", methods=["GET", "POST"])
@@ -95,6 +96,9 @@ def assign_routes(app):
                     r.task_name LIKE '%{keyword}%'
                 )
             """
+
+        # Start notification loop
+        send_notifications()
 
         # Add final closing parenthesis regardless of keyword
         rem_query += "\n)"

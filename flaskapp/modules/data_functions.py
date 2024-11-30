@@ -1,18 +1,18 @@
 # First party imports
-from datetime import datetime, timedelta
+from datetime import datetime
+from email.message import EmailMessage
 import random
 import string
 import ssl
-import atexit
 import smtplib
-from email.message import EmailMessage
+import threading
 
 # Third party imports
 import sqlalchemy as sa
 from flask import render_template, redirect, url_for
 from flaskapp.modules.database import db, Users, Sessions
-from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.interval import IntervalTrigger
+# from apscheduler.schedulers.background import BackgroundScheduler
+# from apscheduler.triggers.interval import IntervalTrigger
 
 
 def create_session(uid):
@@ -221,43 +221,71 @@ def create_task_function(skey, category, name, task_date, rem_date, email, sms, 
         return False
 
 
-def send_email():
-    """Send email based on reminders table"""
-    # Pull current datetime
-    now = datetime.now()
+def send_email(name, category, note, email):
+    """Send email based on reminder table values"""
+    # Save hardcoded values for group email
+    email_sender = 'uconotificaitons@gmail.com'
+    email_password = 'oqya mzhd rvmf apoi'
+    email_receiver = email
 
-    # Define reminder query
-    rem_query = """
-        SELECT *
-        FROM reminders
-    """
-
-    try:
-        # Pull all reminders from table
-        reminders = db.session.execute(sa.text(rem_query)).all()
-    except Exception:
-        # Define reminders as an empty list to avoid NameError
-        reminders = []
-
-    # Define email parameters
-    email_sender = 'sender@email'
-    email_password = 'sender@password'
-    email_receiver = 'receiver@email'
-
-    subject = 'Reminder'
+    # Save parameters
+    subject = name
     # Debugging by sending variables
-    body = f"""Reminder: {rem_query} {reminders} {now}"""
+    body = f"""Category:  {category}\nNote: {note}"""
 
-    # Initialize email object and define variables
+    # Initialize email object and set email parameters
     em = EmailMessage()
     em['From'] = email_sender
     em['To'] = email_receiver
     em['Subject'] = subject
     em.set_content(body)
 
-    # Create ssl context
+    # Create context
     context = ssl.create_default_context()
 
+    # Use login context manager
     with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=context) as smtp:
+        # Login to gmail
         smtp.login(email_sender, email_password)
+        # Send email
         smtp.sendmail(email_sender, email_receiver, em.as_string())
+
+
+def send_notifications():
+    """Send notifications"""
+    # Start repeated timer for sending notifications
+    threading.Timer(15.0, send_notifications).start()
+
+    # Query for notifications
+    notifications_query = """
+        SELECT *
+        FROM reminders join users
+            ON reminders.user_id = users.user_id
+    """
+
+    # Create sqlalchemy engine to access database independently
+    engine = sa.create_engine("sqlite:///instance/database.db")
+    # Open connection to database
+    with engine.connect() as con:
+        # Pull all notifications
+        notifications = con.execute(sa.text(notifications_query)).all()
+        # Loop over all reminders in reminders table
+        for reminder in notifications:
+            if reminder[5] != 'None':
+                if datetime.strptime(reminder[5], '%Y-%m-%d %H:%M:%S') < datetime.now():
+                    # Check reminders boolean
+                    if reminder[6] == 1:
+                        # Send email with the specific values from the table
+                        send_email(reminder[2], reminder[3], reminder[8], reminder[12])
+
+                        # Turn email notification off after sending
+                        disable_notification = f"""
+                            UPDATE reminders
+                            SET email = 0
+                            WHERE reminder_id = {reminder[1]}
+                        """
+
+                        # Execute query
+                        con.execute(sa.text(disable_notification))
+                        # Save change to database.
+                        con.commit()

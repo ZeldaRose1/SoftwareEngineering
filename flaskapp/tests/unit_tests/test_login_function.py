@@ -12,3 +12,5 @@ def test_login_function_valid(app):
         assert skey is not None
         # Check skey length
         assert len(skey) == 80
+
+# TODO: test failed login

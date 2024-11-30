@@ -2,7 +2,7 @@
 
 #!/usr/bin/python
 
-import os
+# import os
 from modules.config import TestingConfig
 
 import pytest

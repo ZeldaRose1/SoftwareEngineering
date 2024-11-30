@@ -73,6 +73,7 @@
                                         <li><a class="btn btn-link text-primary text-decoration-underline btn-sm p-0" href="/welcome/delete/{{ r.reminder_id }}">Delete</a>
                                         </li>
                                         <li>
+<<<<<<< HEAD:flaskapp/templates/welcome.html
                                             {% if r.reminder_id %}
                                                 <a href="{{ url_for('update_task', rid=r.reminder_id) }}" class="btn btn-link text-primary text-decoration-underline btn-sm p-0">
                                                     Update
@@ -81,6 +82,10 @@
                                                 <span class="text-muted">Invalid Task</span>
                                             {% endif %}
                                         </li>                                        
+=======
+                                            <a href="update_task.html" class="btn btn-link text-primary text-decoration-underline btn-sm p-0">Update</a>
+                                        </li>
+>>>>>>> matt:flask/templates/welcome.html
                                     </ul>
                                 </td>                                
                             </tr>
@@ -106,7 +111,7 @@
                 </form>
             </div>
         </div>
-           
+
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
