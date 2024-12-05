@@ -1,9 +1,9 @@
 """Tests create_task_function"""
 import pytest
 
-from flaskapp.modules.__init__ import db
-from flaskapp.modules.database import Reminders
-from flaskapp.modules.data_functions import create_task_function
+from modules.__init__ import db
+from modules.database import Reminders
+from modules.data_functions import create_task_function
 
 
 def test_create_task_function_valid(app):

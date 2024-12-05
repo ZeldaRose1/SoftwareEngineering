@@ -6,8 +6,10 @@ from modules.data_functions import send_notifications
 
 # Initialize flask app
 app = create_app(ProductionConfig())
+
+    
 # Start loop to send notifications
-send_notifications()
+#send_notifications()
 
 print('script finished')
 

@@ -7,8 +7,8 @@ from modules.config import TestingConfig
 
 import pytest
 from sqlalchemy import text
-from flaskapp.modules.__init__ import create_app, db
-# from flaskapp.modules.database import db
+from modules.__init__ import create_app, db
+# from modules.database import db
 
 @pytest.fixture(autouse=True)
 def app():

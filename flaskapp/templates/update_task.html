@@ -10,15 +10,17 @@
 
 <body>
     <div class="container mt-5">
-        <form id="createTask" name="createTask" method="POST" action="{{ url_for('update_task', rid=task.reminder_id) }}">
+        <h1 class="mb-4">Update Task</h1>
+        <form id="updateTask" name="updateTask" method="POST" action="{{ url_for('update_task', rid=task.reminder_id) }}">
+
             <div class="mb-3">
-                <label for="TaskName">Task Name</label>
-                <input name="TaskName" id="TaskName" required type="text" value="{{ task.task_name }}" />
+                <label for="TaskName" class="form-label">Task Name</label>
+                <input name="TaskName" id="TaskName" required class="form-control" type="text" value="{{ task.task_name }}" />
             </div>
 
             <div class="mb-3">
-                <label for="Category">Category</label>
-                <select id="Category" name="Category" onchange="toggleNewCategoryInput(this)">
+                <label for="Category" class="form-label">Category</label>
+                <select id="Category" name="Category" class="form-select" onchange="toggleNewCategoryInput(this)">
                     <option value="">Choose...</option>
                     {% for cat in categories %}
                     <option value="{{ cat[0] }}" {% if cat[0] == task.category %}selected{% endif %}>
@@ -28,45 +30,53 @@
                     <option value="new">Create New Category</option>
                 </select>
             </div>
-            
+
             <div class="mb-3" id="newCategoryDiv" style="display: none;">
-                <label for="NewCategoryName">New Category</label>
-                <input name="NewCategoryName" id="NewCategoryName" type="text" />
+                <label for="NewCategoryName" class="form-label">New Category</label>
+                <input name="NewCategoryName" id="NewCategoryName" type="text" class="form-control" />
             </div>
-            
+
             <script>
-            function toggleNewCategoryInput(select) {
-                const newCategoryDiv = document.getElementById("newCategoryDiv");
-                if (select.value === "new") {
-                    newCategoryDiv.style.display = "block";
-                } else {
-                    newCategoryDiv.style.display = "none";
+                function toggleNewCategoryInput(select) {
+                    const newCategoryDiv = document.getElementById("newCategoryDiv");
+                    const newCategoryInput = document.getElementById("NewCategoryName");
+
+                    if (select.value === "new") {
+                        newCategoryDiv.style.display = "block";
+                        newCategoryInput.required = true;
+                    } else {
+                        newCategoryDiv.style.display = "none";
+                        newCategoryInput.value = "";
+                        newCategoryInput.required = false;
+                    }
                 }
-            }
             </script>
-                      
 
-            <div class="form-check form-check-inline">
-                <input class="form-check-input" type="checkbox" id="Email" name="Email" {% if task.email %}checked{% endif %}>
-                <label class="form-check-label" for="Email">Email</label>
+            <div class="mb-3">
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" id="Email" name="Email" {% if task.email %}checked{% endif %}>
+                    <label class="form-check-label" for="Email">Email</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" id="SMS" name="SMS" {% if task.sms %}checked{% endif %}>
+                    <label class="form-check-label" for="SMS">SMS</label>
+                </div>
             </div>
 
-            <div class="form-check form-check-inline">
-                <input class="form-check-input" type="checkbox" id="SMS" name="SMS" {% if task.sms %}checked{% endif %}>
-                <label class="form-check-label" for="SMS">SMS</label>
+            <!-- Updated datetime-local input -->
+            <div class="mb-3">
+                <label for="datePicker" class="form-label">Select a Date and Time:</label>
+                <input type="datetime-local" id="datePicker" name="datePicker" class="form-control" 
+                    value="{{ task.task_date|tojson|safe }}" />
             </div>
 
             <div class="mb-3">
-                <label for="datePicker">Select a Date:</label>
-                <input type="date" id="datePicker" name="datePicker" value="{{ task.task_date|tojson|safe }}" />
+                <label for="AddNote" class="form-label">Notes</label>
+                <textarea id="AddNote" name="AddNote" class="form-control" rows="4">{{ task.note }}</textarea>
             </div>
 
-            <div class="mb-3">
-                <textarea id="AddNote" name="AddNote" style="width: 200px; height: 150px;">{{ task.note }}</textarea>
-            </div>
-
-            <div class="container mt-3 text-start">
-                <button type="submit" class="btn btn-success btn-sm">Update Task</button>
+            <div class="mt-4">
+                <button type="submit" class="btn btn-success">Update Task</button>
             </div>
         </form>
     </div>

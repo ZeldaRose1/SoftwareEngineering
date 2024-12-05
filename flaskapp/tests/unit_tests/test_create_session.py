@@ -2,7 +2,7 @@
 import pytest
 
 # Import function to test
-from flaskapp.modules.data_functions import create_session
+from modules.data_functions import create_session
 
 def test_invalid_create_session(app):
     """Tests create_session when called with valid inputs"""

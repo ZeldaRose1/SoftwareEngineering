@@ -4,13 +4,15 @@ from flask import render_template, request, redirect, url_for
 from flask import session
 import sqlalchemy as sa
 
-# from flaskapp.modules.data_functions import create_session
-from flaskapp.modules.data_functions import login_function
-from flaskapp.modules.data_functions import create_user_function
-from flaskapp.modules.data_functions import verify_login
-from flaskapp.modules.data_functions import create_task_function
-from flaskapp.modules.data_functions import db
-from flaskapp.modules.data_functions import send_notifications
+# from modules.data_functions import create_session
+from modules.data_functions import login_function
+from modules.data_functions import create_user_function
+from modules.data_functions import verify_login
+from modules.data_functions import create_task_function
+from modules.data_functions import db
+from modules.data_functions import send_notifications
+from modules.data_functions import update_tasks
+from modules.data_functions import fetch_task
 
 def assign_routes(app):
     @app.route("/", methods=["GET", "POST"])
@@ -269,75 +271,42 @@ def assign_routes(app):
 
     @app.route("/update_task/<rid>", methods=["GET", "POST"])
     def update_task(rid):
-        """Handles updating a specific task by reminder ID."""
-        # Pull session key
-        skey = session.get("skey")
+        # Fetch task from the database
+        task, error = fetch_task(rid, db)
 
-        # Verify login is active
-        if not verify_login(skey):
-            return redirect(url_for("root"))
-
-        # Pull variables
-        if request.method == "POST":
-            category = request.form.get("CategoryName", "")
-            task_date = request.form.get("datePicker", "")
-            email = request.form.get("Email", False)
-            sms = request.form.get("SMS", False)
-            note = request.form.get("AddNote", "")
-            try:
-                # Save query
-                update_query = sa.text(
-                    """
-                    UPDATE reminders
-                    SET category = :category,
-                        task_date = :task_date,
-                        email = :email,
-                        sms = :sms,
-                        note = :note
-                    WHERE reminder_id = :rid
-                    """
-                )
-                # Execute query
-                db.session.execute(
-                    update_query,
-                    {
-                        "category": category,
-                        "task_date": task_date,
-                        "email": email,
-                        "sms": sms,
-                        "note": note,
-                        "rid": rid,
-                    },
-                )
-                # Save changes to database
-                db.session.commit()
-                # If update succeeds, return to welcome page
-                return redirect(url_for("welcome"))
-            except Exception as e:
-                # If update fails print error message
-                print(f"Error updating task: {str(e)}")
-                # Return to update task page
-                return render_template("update_task.html", task=None)
-        try:
-            # Query to pull reminder values from reminder id
-            task_query = sa.text(
-                """
-                SELECT reminder_id, category, task_name, task_date, note, reminder_dtm
-                FROM reminders
-                WHERE reminder_id = :rid
-                """
-            )
-            # Pull reminder
-            task = db.session.execute(task_query, {"rid": rid}).fetchone()
-        except Exception as e:
-            # Print error message if one exists
-            print(f"Error fetching task details: {str(e)}")
-            # Assign task to a variable to avoid NameError
-            task = None
-
-        if task is None:
-            print(f"Task with ID {rid} not found!")
+        if error or task is None:
+            print(f"Error fetching task: {error}")
             return redirect(url_for("welcome"))
 
-        # Load HTML page
-        return render_template("update_task.html", task=task)
+        # Ensure task_date is formatted correctly for datetime-local
+        if 'task_date' in task and task['task_date']:
+            try:
+                # Check if task_date is already in datetime-local format
+                if "T" not in task['task_date']:
+                    task['task_date'] = datetime.strptime(task['task_date'], '%Y-%m-%d %H:%M:%S').strftime('%Y-%m-%dT%H:%M')
+            except ValueError:
+                print(f"Invalid task_date format: {task['task_date']}")
+                task['task_date'] = None
+
+        # Fetch categories
+        try:
+            categories_query = sa.text(
+                """
+                SELECT DISTINCT category FROM reminders
+                """
+            )
+            categories = db.session.execute(categories_query).fetchall()
+        except Exception as e:
+            print(f"Error fetching categories: {e}")
+            categories = []
+
+        # Handle POST request to update task
+        if request.method == "POST":
+            success, error = update_tasks(rid, request.form, db)
+            if success:
+                return redirect(url_for("welcome"))
+            else:
+                print(f"Error updating task: {error}")
+
+        # Render the update task form
+        return render_template("update_task.html", task=task, categories=categories)

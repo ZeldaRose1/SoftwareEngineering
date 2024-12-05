@@ -2,8 +2,8 @@
 
 import pytest
 # Import function to test
-from flaskapp.modules.data_functions import create_user_function
-from flaskapp.modules.__init__ import db, Users
+from modules.data_functions import create_user_function
+from modules.__init__ import db, Users
 
 def test_create_user_function_valid(app):
     """Checks create_user_function() with valid input"""
