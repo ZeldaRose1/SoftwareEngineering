@@ -187,6 +187,8 @@ def assign_routes(app):
             sms_b = None
 
         # Verify boolean values are read as boolean
+        if use_existing_cat == "on":
+            use_existing_cat = True
         if reminder_b == "on":
             reminder_b = True
         if email_b == "on":
@@ -195,15 +197,14 @@ def assign_routes(app):
             sms_b = True
 
         # We have automatic testing so trace statements are unneeded
-        # print(t_name)
-        # print(new_cat)
-        # print(use_existing_cat)
-        # print(reuse_category)
-        # print(tdate)
-        # print(task_note)
+        print("t_name:\t" + str(t_name))
+        print("new_cat:\t" + str(new_cat))
+        print("use_existing_cat:\t" + str(use_existing_cat))
+        print("reuse_category:\t" + str(reuse_category))
+        print("tdate\t" + str(tdate))
+        print("task_note:\t" + str(task_note))
         # print("reminder_time:" + str(reminder_time))
         # print("reminder_b:\t" + str(reminder_b))
-        # print(note_bool)
         # print(email_b)
         # print(sms_b)
 
