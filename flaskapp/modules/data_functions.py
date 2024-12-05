@@ -1,6 +1,8 @@
 # First party imports
 from datetime import datetime
 from email.message import EmailMessage
+import glob
+import os
 import random
 import string
 import ssl
@@ -10,7 +12,7 @@ import threading
 # Third party imports
 import sqlalchemy as sa
 from flask import render_template, redirect, url_for
-from flaskapp.modules.database import db, Users, Sessions
+from modules.database import db, Users, Sessions
 # from apscheduler.schedulers.background import BackgroundScheduler
 # from apscheduler.triggers.interval import IntervalTrigger
 
@@ -263,29 +265,38 @@ def send_notifications():
             ON reminders.user_id = users.user_id
     """
 
+    # Find path to database
+    db_rel_path = glob.glob('**/database.db', recursive=True)[0]
+    print(db_rel_path)
+    
     # Create sqlalchemy engine to access database independently
-    engine = sa.create_engine("sqlite:///instance/database.db")
+    engine = sa.create_engine(f"sqlite:///{db_rel_path}")
     # Open connection to database
-    with engine.connect() as con:
-        # Pull all notifications
-        notifications = con.execute(sa.text(notifications_query)).all()
-        # Loop over all reminders in reminders table
-        for reminder in notifications:
-            if reminder[5] != 'None':
-                if datetime.strptime(reminder[5], '%Y-%m-%d %H:%M:%S') < datetime.now():
-                    # Check reminders boolean
-                    if reminder[6] == 1:
-                        # Send email with the specific values from the table
-                        send_email(reminder[2], reminder[3], reminder[8], reminder[12])
+    if os.path.exists(db_rel_path):
+        with engine.connect() as con:
+            # Pull all notifications
+            notifications = con.execute(sa.text(notifications_query)).all()
+            # Loop over all reminders in reminders table
+            for reminder in notifications:
+                if reminder[5] != 'None':
+                    if reminder[5] is not None and datetime.strptime(reminder[5], '%Y-%m-%d %H:%M:%S') < datetime.now():
+                        # Check reminders boolean
+                        if reminder[6] == 1:
+                            # Send email with the specific values from the table
+                            send_email(reminder[2], reminder[3], reminder[8], reminder[12])
 
-                        # Turn email notification off after sending
-                        disable_notification = f"""
-                            UPDATE reminders
-                            SET email = 0
-                            WHERE reminder_id = {reminder[1]}
-                        """
+                            # Turn email notification off after sending
+                            disable_notification = f"""
+                                UPDATE reminders
+                                SET email = 0
+                                WHERE reminder_id = {reminder[1]}
+                            """
 
-                        # Execute query
-                        con.execute(sa.text(disable_notification))
-                        # Save change to database.
-                        con.commit()
+                            # Execute query
+                            con.execute(sa.text(disable_notification))
+                            # Save change to database.
+                            con.commit()
+    else:
+        print("Database does not exist")
+        print("Current working directory: " + os.getcwd())
+

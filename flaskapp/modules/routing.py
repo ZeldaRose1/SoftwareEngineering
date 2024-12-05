@@ -4,13 +4,13 @@ from flask import render_template, request, redirect, url_for
 from flask import session
 import sqlalchemy as sa
 
-# from flaskapp.modules.data_functions import create_session
-from flaskapp.modules.data_functions import login_function
-from flaskapp.modules.data_functions import create_user_function
-from flaskapp.modules.data_functions import verify_login
-from flaskapp.modules.data_functions import create_task_function
-from flaskapp.modules.data_functions import db
-from flaskapp.modules.data_functions import send_notifications
+# from modules.data_functions import create_session
+from modules.data_functions import login_function
+from modules.data_functions import create_user_function
+from modules.data_functions import verify_login
+from modules.data_functions import create_task_function
+from modules.data_functions import db
+from modules.data_functions import send_notifications
 
 def assign_routes(app):
     @app.route("/", methods=["GET", "POST"])

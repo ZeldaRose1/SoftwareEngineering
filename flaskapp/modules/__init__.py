@@ -3,8 +3,8 @@
 #!/usr/bin/python3
 
 import flask
-# from flaskapp.modules.database import db
-from flaskapp.modules.routing import assign_routes, db
+# from modules.database import db
+from modules.routing import assign_routes, db
 
 
 def create_app(config_object=None):

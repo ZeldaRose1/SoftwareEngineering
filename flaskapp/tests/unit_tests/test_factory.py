@@ -1,7 +1,7 @@
 """Test application factory"""
 
-from flaskapp.modules import config
-from flaskapp.modules import create_app
+from modules import config
+from modules import create_app
 
 def test_application_factory():
     """

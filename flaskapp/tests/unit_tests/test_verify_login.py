@@ -2,8 +2,8 @@
 import pytest
 
 
-from flaskapp.modules.data_functions import verify_login
-from flaskapp.modules.__init__ import db
+from modules.data_functions import verify_login
+from modules.__init__ import db
 
 def test_verify_login_valid(app):
     """Asserts verify_login returns True for existing session"""
