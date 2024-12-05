@@ -253,6 +253,82 @@ def send_email(name, category, note, email):
         smtp.sendmail(email_sender, email_receiver, em.as_string())
 
 
+def update_tasks(rid, request_data, db):
+    """Update a task based on reminder ID and form data."""
+    task, error = fetch_task(rid, db)
+    if not task:
+        return False, f"Error fetching task: {error}"
+
+    category = request_data.get("Category")
+    if category == "new":
+        category = request_data.get("NewCategoryName")
+        if not category:
+            return False, "New category name cannot be empty."
+    category = category or task['category']
+
+    task_date = request_data.get("datePicker") or task['task_date']
+    email = request_data.get("Email", task['email'])
+    sms = request_data.get("SMS", task['sms'])
+    note = request_data.get("AddNote") or task['note']
+
+    try:
+        update_query = sa.text(
+            """
+            UPDATE reminders
+            SET category = :category,
+                task_date = :task_date,
+                email = :email,
+                sms = :sms,
+                note = :note
+            WHERE reminder_id = :rid
+            """
+        )
+        db.session.execute(
+            update_query,
+            {
+                "category": category,
+                "task_date": task_date,
+                "email": email,
+                "sms": sms,
+                "note": note,
+                "rid": rid,
+            },
+        )
+        db.session.commit()
+        return True, None
+    except Exception as e:
+        return False, str(e)
+
+def fetch_task(rid, db):
+    """Fetch a task based on reminder ID."""
+    try:
+        task_query = sa.text(
+            """
+            SELECT reminder_id, category, task_name, task_date, note,
+                   reminder_dtm, email, sms
+            FROM reminders
+            WHERE reminder_id = :rid
+            """
+        )
+        task = db.session.execute(task_query, {"rid": rid}).fetchone()
+
+        if task:
+            task = {key: value for key, value in task._mapping.items()}
+
+            if task['task_date']:
+                try:
+                    if "T" not in task['task_date']:
+                        task['task_date'] = datetime.strptime(
+                            task['task_date'], '%Y-%m-%d %H:%M:%S'
+                        ).strftime('%Y-%m-%dT%H:%M')
+                except ValueError:
+                    print(f"Invalid task_date format: {task['task_date']}")
+                    task['task_date'] = None
+
+        return task, None
+    except Exception as e:
+        return None, str(e)
+
 def send_notifications():
     """Send notifications"""
     # Start repeated timer for sending notifications
