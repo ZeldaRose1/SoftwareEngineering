@@ -9,7 +9,7 @@ app = create_app(ProductionConfig())
 
     
 # Start loop to send notifications
-# send_notifications()
+send_notifications()
 
 print('script finished')
 
