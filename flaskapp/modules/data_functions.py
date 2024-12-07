@@ -376,3 +376,60 @@ def send_notifications():
         print("Database does not exist")
         print("Current working directory: " + os.getcwd())
 
+
+def edit_user(skey, uname, pw, email):
+    """
+    Update entry in Users table with given parameters
+
+    Parameters:
+        skey: session_key to validate user identity
+        uname: username to update Users table entry with
+        pw: password to update Users table entry with
+        email: email to update Users table entry with
+    
+    Returns:
+        True if push successful, False otherwise
+    """
+    # Write update query in steps
+    query = "UPDATE users\nSET\n\t"
+
+    # Set variable to help handle commas
+    comma_needed = False
+    if (uname is not None and uname != ''):
+        query += f"user_name='{uname}'"
+        comma_needed = True
+    
+    # Handle logic for password section
+    if (pw is not None and pw != ''):
+        # Adjust for commas
+        if comma_needed:
+            query += ",\n"
+        query += f"password='{pw}'"
+        comma_needed = True
+    
+    # Handle logic for email section
+    if (email is not None and email != ''):
+        # Adjust for commas
+        if comma_needed:
+            query += ",\n"
+        query += f"email='{email}'"
+
+    # Add where clause
+    query += f"\nWHERE user_id IN (\
+        SELECT user_id FROM sessions WHERE session_key='{skey}')"
+
+    print(query)
+    
+    # Update the user information
+    try:
+        # Execute query
+        db.session.execute(sa.text(query))
+        # Commit changes
+        db.session.commit()
+        # Return true flag for a successful push
+        return True
+    except Exception as e:
+        # Print error message
+        print(f"Error in edit_user:\t{e}")
+        # Return false flag for failed push
+        return False

@@ -10,6 +10,7 @@ from modules.data_functions import create_user_function
 from modules.data_functions import verify_login
 from modules.data_functions import create_task_function
 from modules.data_functions import db
+from modules.data_functions import edit_user
 from modules.data_functions import send_notifications
 from modules.data_functions import update_tasks
 from modules.data_functions import fetch_task
@@ -197,12 +198,12 @@ def assign_routes(app):
             sms_b = True
 
         # We have automatic testing so trace statements are unneeded
-        print("t_name:\t" + str(t_name))
-        print("new_cat:\t" + str(new_cat))
-        print("use_existing_cat:\t" + str(use_existing_cat))
-        print("reuse_category:\t" + str(reuse_category))
-        print("tdate\t" + str(tdate))
-        print("task_note:\t" + str(task_note))
+        # print("t_name:\t" + str(t_name))
+        # print("new_cat:\t" + str(new_cat))
+        # print("use_existing_cat:\t" + str(use_existing_cat))
+        # print("reuse_category:\t" + str(reuse_category))
+        # print("tdate\t" + str(tdate))
+        # print("task_note:\t" + str(task_note))
         # print("reminder_time:" + str(reminder_time))
         # print("reminder_b:\t" + str(reminder_b))
         # print(email_b)
@@ -311,3 +312,33 @@ def assign_routes(app):
 
         # Render the update task form
         return render_template("update_task.html", task=task, categories=categories)
+
+    @app.route("/welcome/edit_user", methods=["GET", "POST"])
+    def edit_user_page():
+        """Render template to edit user data"""
+        # Pull session key from session
+        skey = session.get('skey')
+        # Verify login
+        if not verify_login(skey):
+            return redirect(url_for('root'))
+
+        # Check request method
+        if request.method == "POST":
+            # Pull parameters
+            un = request.form.get("username", None)
+            pw = request.form.get("password", None)
+            email = request.form.get("email", None)
+            # Push update
+            result = edit_user(skey, un, pw, email)
+            # Return to welcome page
+            if result:
+                return redirect("/welcome")
+
+        # Pull user data
+        user_data = db.session.execute(sa.text(
+            f"SELECT * from users WHERE user_id IN\
+                (SELECT user_id FROM sessions WHERE session_key = '{skey}')"
+        )).all()[0]
+
+        # Render template
+        return render_template("edit_user.html", user=user_data)
