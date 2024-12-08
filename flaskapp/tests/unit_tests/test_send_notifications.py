@@ -4,18 +4,30 @@ import pytest
 import modules
 
 from modules.data_functions import send_notifications
+from modules.__init__ import db
+from modules.database import Reminders
 
-def test_send_notifications(mocker):
+def test_send_notifications(app, mocker):
     """Verify send_notifications will work with valid input using mocker"""
 
     mocker.patch("modules.data_functions.send_email")
 
-    # Send notification
-    send_notifications()
+    with app.app_context():
 
-    # Validate send_email is called
-    #modules.data_functions.send_email.assert_called_once_with("clean dishes", "chores", "clean dishes before lunch", "oath@breaker.com")
-    modules.data_functions.send_email.assert_called()
-    #smtplib.SMTP_SSL.return_value.__enter__.return_value.sendmail.assert_called_once_with("uconotificaitons@gmail.com", "mock@pytest.com", """From: uconotificaitons@gmail.com\nTo: mock@pytest.com\nSubject: New car!\nContent-Type: text/plain; charset="utf-8"\nContent-Transfer-Encoding: 7bit\nMIME-Version: 1.0\n\nCategory:  Major purchases\nNote: Your car is dying\n""")
+        # Verify email is set for first reminder
+        task = Reminders.query.filter_by(email=1).first()
+        assert task is not None
+
+        # Send notification
+        send_notifications(True, '%Y-%m-%dT%H:%M')
+
+        # Validate send_email is called
+        #modules.data_functions.send_email.assert_called_with('clean dishes', 'chores', 'clean dishes before lunch', 'oath@breaker.com')
+        #modules.data_functions.send_email.assert_called_with('file taxes', 'finances', 'file taxes for grandparents', 'oath@breaker.com')
+        modules.data_functions.send_email.assert_called()
+
+        # Verify email is disabled for first notification
+        task = Reminders.query.filter_by(email=0).first()
+        assert task is not None
 
     assert True

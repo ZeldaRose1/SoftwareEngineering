@@ -329,10 +329,7 @@ def fetch_task(rid, db):
     except Exception as e:
         return None, str(e)
 
-def send_notifications():
-    """Send notifications"""
-    # Start repeated timer for sending notifications
-    threading.Timer(15.0, send_notifications).start()
+def send_notifications(debug = False, date_time_format = '%Y-%m-%d %H:%M:%S'):
 
     # Query for notifications
     notifications_query = """
@@ -341,40 +338,51 @@ def send_notifications():
             ON reminders.user_id = users.user_id
     """
 
-    # Find path to database
-    db_rel_path = glob.glob('**/database.db', recursive=True)[0]
-    print(db_rel_path)
-    
-    # Create sqlalchemy engine to access database independently
-    engine = sa.create_engine(f"sqlite:///{db_rel_path}")
-    # Open connection to database
-    if os.path.exists(db_rel_path):
-        with engine.connect() as con:
-            # Pull all notifications
-            notifications = con.execute(sa.text(notifications_query)).all()
-            # Loop over all reminders in reminders table
-            for reminder in notifications:
-                if reminder[5] != 'None':
-                    if reminder[5] is not None and datetime.strptime(reminder[5], '%Y-%m-%d %H:%M:%S') < datetime.now():
-                        # Check reminders boolean
-                        if reminder[6] == 1:
-                            # Send email with the specific values from the table
-                            send_email(reminder[2], reminder[3], reminder[8], reminder[12])
+    #use threading and the stored database
+    if (debug == False):
+        """Send notifications"""
+        # Start repeated timer for sending notifications
+        threading.Timer(15.0, send_notifications).start()
 
-                            # Turn email notification off after sending
-                            disable_notification = f"""
-                                UPDATE reminders
-                                SET email = 0
-                                WHERE reminder_id = {reminder[1]}
-                            """
-
-                            # Execute query
-                            con.execute(sa.text(disable_notification))
-                            # Save change to database.
-                            con.commit()
+        # Find path to database
+        db_rel_path = glob.glob('**/database.db', recursive=True)[0]
+        print(db_rel_path)
+        
+        # Create sqlalchemy engine to access database independently
+        engine = sa.create_engine(f"sqlite:///{db_rel_path}")
+        # Open connection to database
+        if os.path.exists(db_rel_path):
+            con = engine.connect()
+        else:
+            print("Database does not exist")
+            print("Current working directory: " + os.getcwd())
+            return
+    #use no thread and the database in RAM
     else:
-        print("Database does not exist")
-        print("Current working directory: " + os.getcwd())
+        con = db.session
+
+    # Pull all notifications
+    notifications = con.execute(sa.text(notifications_query)).all()
+    # Loop over all reminders in reminders table
+    for reminder in notifications:
+        if reminder[5] != 'None':
+            if reminder[5] is not None and datetime.strptime(reminder[5], date_time_format) < datetime.now():
+                # Check reminders boolean
+                if reminder[6] == 1:
+                    # Send email with the specific values from the table
+                    send_email(reminder[2], reminder[3], reminder[8], reminder[12])
+
+                    # Turn email notification off after sending
+                    disable_notification = f"""
+                        UPDATE reminders
+                        SET email = 0
+                        WHERE reminder_id = {reminder[1]}
+                    """
+
+                    # Execute query
+                    con.execute(sa.text(disable_notification))
+                    # Save change to database.
+                    con.commit()
 
 
 def edit_user(skey, uname, pw, email):
