@@ -24,7 +24,10 @@ def test_send_notifications(app, mocker):
         send_notifications(True, '%Y-%m-%dT%H:%M')
 
         # Validate send_email is called with the correct arguments
-        modules.data_functions.send_email.assert_has_calls([call('clean dishes', 'chores', 'clean dishes before lunch', 'oath@breaker.com'), call('file taxes', 'finances', 'file taxes for grandparents', 'oath@breaker.com')])
+        modules.data_functions.send_email.assert_has_calls(
+            [call('clean dishes', 'chores', 'clean dishes before lunch', 'oath@breaker.com'),
+             call('file taxes', 'finances', 'file taxes for grandparents', 'oath@breaker.com')]
+        )
         # Ensure send_email was called only twice
         # Send email should not be called for reminder 3 because the reminder date is next year
         # Send email should not be called for reminder 4 because the email boolean is false
