@@ -82,6 +82,78 @@ def app():
                 'file taxes for grandparents'
             )
         """))
+        db.session.execute(text("""
+            INSERT INTO reminders (
+                user_id,
+                reminder_id,
+                task_name,
+                category,
+                task_date,
+                reminder_dtm,
+                email,
+                sms,
+                note
+            )
+            VALUES (
+                1,
+                3,
+                'fix broken lamp',
+                'chores',
+                STRFTIME("%Y-%m-%dT%H:%M", '2025-12-01T12:00'),
+                STRFTIME("%Y-%m-%dT%H:%M", '2025-12-01T11:00'),
+                True,
+                False,
+                'make sure lamp is fixed'
+            )
+        """))
+        db.session.execute(text("""
+            INSERT INTO reminders (
+                user_id,
+                reminder_id,
+                task_name,
+                category,
+                task_date,
+                reminder_dtm,
+                email,
+                sms,
+                note
+            )
+            VALUES (
+                1,
+                4,
+                'do laundry',
+                'chores',
+                STRFTIME("%Y-%m-%dT%H:%M", '2024-12-01T12:00'),
+                STRFTIME("%Y-%m-%dT%H:%M", '2024-12-01T11:00'),
+                False,
+                False,
+                'do the laundry'
+            )
+        """))
+        db.session.execute(text("""
+            INSERT INTO reminders (
+                user_id,
+                reminder_id,
+                task_name,
+                category,
+                task_date,
+                reminder_dtm,
+                email,
+                sms,
+                note
+            )
+            VALUES (
+                1,
+                5,
+                'complete assignment',
+                'school',
+                NULL,
+                NULL,
+                False,
+                False,
+                'do the laundry'
+            )
+        """))
         db.session.commit()
 
     yield app
