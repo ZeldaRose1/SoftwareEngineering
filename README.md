@@ -1,1 +1,6 @@
 # SoftwareEngineering
+This repo was a team project during the spring 2024 semester between myself and three other classmates for our final project in Software Engineering. We were tasked with coding a web based notification application that would send reminders through SMS and email. There were some required features that had to be included to make a finished project, but we were given significant amounts of freedom to use the tools we were most comfortable with. The full specifications can be found in the Project Description-v1-.docx file.
+
+The programming language the group had the most collective experience with was Python so we decided to use it to generate the bulk of the code. No member of the team had experience with web design so we chose flask to handle the HTML code. The backend used a SQLite database with a connection through Python's SQL Alchemy package.
+
+The team met weekly with Zelda as the team lead and primary coder. We used Star UML to draft diagrams and plans for what needed to be accomplished for the project and then divvied up the tasks based on each team members strengths and availability. The final project was pushed to the school's server to serve the data for verification. Overall the program was a success, and completed on time with a minor period of crunch near the end.
